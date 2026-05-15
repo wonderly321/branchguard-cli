@@ -31,8 +31,8 @@ Planned:
 
 Tracking issues:
 
-- GitHub Action wrapper
-- Markdown/JSON report polish
+- [#1 GitHub Action wrapper](https://github.com/wonderly321/branchguard-cli/issues/1)
+- [#2 Markdown report output](https://github.com/wonderly321/branchguard-cli/issues/2)
 - Modern Git merge-tree parser hardening
 
 ## v0.3: Team Workflow
