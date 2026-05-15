@@ -53,6 +53,49 @@ function Get-TokenFromJson {
   throw "Could not find token field in npm token output. Fields: $($payload.PSObject.Properties.Name -join ', ')"
 }
 
+function New-TokenArgs {
+  param(
+    [string]$Password,
+    [string]$Otp
+  )
+
+  $args = @(
+    "token", "create",
+    "--name", "branchguard-cli-beta-publish",
+    "--token-description", "Temporary BranchGuard beta publish token",
+    "--expires", "1",
+    "--packages-all",
+    "--packages-and-scopes-permission", "read-write",
+    "--bypass-2fa",
+    "--password", $Password,
+    "--registry", "https://registry.npmjs.org/",
+    "--json"
+  )
+
+  if ($Otp) {
+    $args += @("--otp", $Otp)
+  }
+
+  return $args
+}
+
+function Invoke-TokenCreate {
+  param([string[]]$TokenArgs)
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $output = & npm.cmd @TokenArgs 2>&1
+    return @{
+      ExitCode = $LASTEXITCODE
+      Output = $output
+      Text = ($output -join "`n")
+    }
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+}
+
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $projectRoot
 
@@ -94,35 +137,33 @@ $securePassword = Read-Host "npm password" -AsSecureString
 $password = ConvertFrom-SecureStringPlainText $securePassword
 $tokenOtp = Read-Host "npm 2FA OTP for token creation, or press Enter if npm does not ask for one"
 
-$tokenArgs = @(
-  "token", "create",
-  "--name", "branchguard-cli-beta-publish",
-  "--token-description", "Temporary BranchGuard beta publish token",
-  "--expires", "1",
-  "--packages-all",
-  "--packages-and-scopes-permission", "read-write",
-  "--bypass-2fa",
-  "--password", $password,
-  "--registry", "https://registry.npmjs.org/",
-  "--json"
-)
+$tokenResult = $null
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  $tokenResult = Invoke-TokenCreate (New-TokenArgs -Password $password -Otp $tokenOtp)
+  if ($tokenResult.ExitCode -eq 0) {
+    break
+  }
 
-if ($tokenOtp) {
-  $tokenArgs += @("--otp", $tokenOtp)
+  $redactedOutput = $tokenResult.Text -replace "npm_[A-Za-z0-9_\-]+", "npm_***redacted***"
+  Write-Host $redactedOutput
+
+  if ($tokenResult.Text -match "Please check your email" -or $tokenResult.Text -match "one-time password") {
+    $tokenOtp = Read-Host "Enter the npm OTP from your email/authenticator, then press Enter"
+    continue
+  }
+
+  if ($attempt -lt 3) {
+    $tokenOtp = Read-Host "Token creation failed. Enter a fresh npm OTP to retry, or press Enter to retry without OTP"
+  }
 }
 
-$tokenOutput = & npm.cmd @tokenArgs 2>&1
-$tokenExit = $LASTEXITCODE
 $password = $null
 
-if ($tokenExit -ne 0) {
-  $redactedOutput = ($tokenOutput -join "`n") -replace "npm_[A-Za-z0-9_\-]+", "npm_***redacted***"
-  Write-Host $redactedOutput
-  throw "npm token create failed with exit code $tokenExit"
+if (-not $tokenResult -or $tokenResult.ExitCode -ne 0) {
+  throw "npm token create failed with exit code $($tokenResult.ExitCode)"
 }
 
-$tokenText = $tokenOutput -join "`n"
-$token = Get-TokenFromJson $tokenText
+$token = Get-TokenFromJson $tokenResult.Text
 
 New-Item -ItemType Directory -Force ".tmp" | Out-Null
 $tempNpmrc = Join-Path ".tmp" "publish.npmrc"
