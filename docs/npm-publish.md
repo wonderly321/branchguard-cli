@@ -62,3 +62,8 @@ npm dist-tag add branchguard-cli@0.1.0 latest
 - `branchguard` on npm is already taken, so the package name is `branchguard-cli`.
 - The command remains `branchguard`.
 - The current implementation requires Node.js 20 or newer.
+- If npm account registration is blocked, users can install from GitHub first:
+
+```bash
+npm install --global github:wonderly321/branchguard-cli
+```

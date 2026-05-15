@@ -21,6 +21,13 @@ npm install --global branchguard-cli
 branchguard doctor
 ```
 
+Install from GitHub before npm is published:
+
+```bash
+npm install --global github:wonderly321/branchguard-cli
+branchguard doctor
+```
+
 Run from inside a Git repository:
 
 ```bash
