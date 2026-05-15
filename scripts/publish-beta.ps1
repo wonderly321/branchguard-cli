@@ -66,13 +66,18 @@ function New-TokenArgs {
     "--name", $TokenName,
     "--token-description", "Temporary BranchGuard beta publish token",
     "--expires", "1",
-    "--scopes", $Scope,
     "--packages-and-scopes-permission", "read-write",
     "--bypass-2fa",
     "--password", $Password,
     "--registry", "https://registry.npmjs.org/",
     "--json"
   )
+
+  if ($Scope) {
+    $args += @("--scopes", $Scope)
+  } else {
+    $args += @("--packages-all")
+  }
 
   if ($Otp) {
     $args += @("--otp", $Otp)
@@ -150,7 +155,7 @@ $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $projectRoot
 
 $packageJson = Get-Content -Raw -Encoding UTF8 "package.json" | ConvertFrom-Json
-if ($packageJson.name -ne "@sonori/branchguard-cli") {
+if ($packageJson.name -ne "branchguard-cli") {
   throw "Refusing to publish unexpected package '$($packageJson.name)'."
 }
 
@@ -158,7 +163,8 @@ $packageScope = ""
 if ($packageJson.name -match "^@([^/]+)/") {
   $packageScope = "@$($Matches[1])"
 } else {
-  throw "Package must be scoped so the temporary granular token can be limited to a scope."
+  Write-Host "Package is unscoped; CLI-created granular token may not work for first publish." -ForegroundColor Yellow
+  Write-Host "If publish fails, use scripts/publish-beta-with-token.ps1 with a web-created token that has All packages + Bypass 2FA." -ForegroundColor Yellow
 }
 
 $tokenName = "branchguard-cli-beta-publish-$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
@@ -229,7 +235,15 @@ if ($publishResult.Ok) {
   exit 0
 }
 
-if ($publishResult.Text -match "E404" -or $publishResult.Text -match "not found" -or $publishResult.Text -match "permission") {
+if (
+  $publishResult.Text -match "E403" -or
+  $publishResult.Text -match "E404" -or
+  $publishResult.Text -match "Two-factor" -or
+  $publishResult.Text -match "2fa" -or
+  $publishResult.Text -match "security policy" -or
+  $publishResult.Text -match "not found" -or
+  $publishResult.Text -match "permission"
+) {
   Write-Host ""
   Write-Host "The CLI-created token could not publish the first package under this scope." -ForegroundColor Yellow
   Write-Host "Opening npm token settings. Create a Granular Access Token with:" -ForegroundColor Yellow
@@ -251,6 +265,8 @@ if ($publishResult.Text -match "E404" -or $publishResult.Text -match "not found"
     Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
     exit 0
   }
+
+  throw "Manual npm token publish failed. Make sure the token is Granular, Read and write, has access to @sonori or all packages, and has Bypass 2FA enabled."
 }
 
 throw "npm publish failed with exit code $($publishResult.ExitCode)"

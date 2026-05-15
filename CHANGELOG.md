@@ -16,5 +16,5 @@ Added:
 - Configurable `highRiskPatterns`
 - Configurable `ignorePatterns`
 - Git 2.37 fallback for older `git merge-tree` output
-- npm package metadata for `@sonori/branchguard-cli`
+- npm package metadata for `branchguard-cli`
 - GitHub Action example

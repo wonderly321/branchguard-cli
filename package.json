@@ -1,5 +1,5 @@
 {
-  "name": "@sonori/branchguard-cli",
+  "name": "branchguard-cli",
   "version": "0.1.0",
   "description": "Lightweight Git merge conflict pre-check CLI.",
   "type": "module",
@@ -27,6 +27,7 @@
     "check": "node --check ./bin/branchguard.mjs && node --check ./test/branchguard.test.mjs",
     "prepack": "npm run check && npm test",
     "publish:beta:win": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-beta.ps1",
+    "publish:beta:token:win": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-beta-with-token.ps1",
     "start": "node ./bin/branchguard.mjs",
     "test": "node --test"
   },

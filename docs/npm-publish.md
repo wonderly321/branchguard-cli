@@ -1,6 +1,6 @@
 # npm Publish Guide
 
-Package name: `@sonori/branchguard-cli`
+Package name: `branchguard-cli`
 
 Repository:
 
@@ -58,6 +58,12 @@ On Windows, the helper script automates the publish flow without putting secrets
 powershell -ExecutionPolicy Bypass -File .\scripts\publish-beta.ps1
 ```
 
+If OTP/token automation keeps failing, use the simpler token-only helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publish-beta-with-token.ps1
+```
+
 It will:
 
 - run checks and tests
@@ -69,20 +75,19 @@ It will:
 Install beta:
 
 ```bash
-npm install --global @sonori/branchguard-cli@beta
+npm install --global branchguard-cli@beta
 branchguard doctor
 ```
 
 Promote to latest after smoke testing:
 
 ```bash
-npm dist-tag add @sonori/branchguard-cli@0.1.0 latest
+npm dist-tag add branchguard-cli@0.1.0 latest
 ```
 
 ## Notes
 
-- `branchguard` on npm is already taken.
-- The initial public npm package uses the scoped name `@sonori/branchguard-cli`.
+- `branchguard` on npm is already taken, so the package name is `branchguard-cli`.
 - The command remains `branchguard`.
 - The current implementation requires Node.js 20 or newer.
 - If npm account registration is blocked, users can install from GitHub first:
