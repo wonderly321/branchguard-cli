@@ -14,6 +14,7 @@ This checklist turns the current CLI into a release-ready v0.1.
 - [x] Push initial `main` branch to GitHub.
 - [x] Add repository URL in `package.json`.
 - [ ] Login to npm.
+- [ ] Publish with OTP or granular token if npm requires 2FA.
 - [ ] Add screenshots or terminal demo GIF.
 - [x] Add `CHANGELOG.md`.
 - [ ] Add GitHub repository URL in `package.json`.

@@ -44,6 +44,14 @@ Publish beta:
 npm publish --tag beta --cache .npm-cache
 ```
 
+If npm requires two-factor authentication:
+
+```bash
+npm publish --tag beta --otp <one-time-code> --cache .npm-cache
+```
+
+Alternative: create a granular access token on npm with package publishing permission and 2FA bypass enabled, then configure it in your user `.npmrc`.
+
 Install beta:
 
 ```bash

@@ -12,7 +12,7 @@
     "url": "https://github.com/wonderly321/branchguard-cli/issues"
   },
   "bin": {
-    "branchguard": "./bin/branchguard.mjs"
+    "branchguard": "bin/branchguard.mjs"
   },
   "files": [
     "bin/",
