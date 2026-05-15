@@ -9,6 +9,10 @@ This checklist turns the current CLI into a release-ready v0.1.
 - [x] Decide distribution path: npm package first.
 - [x] Add license.
 - [x] Confirm MIT open-source route.
+- [x] Create initial local git commit.
+- [ ] Create GitHub repository.
+- [ ] Add repository URL in `package.json`.
+- [ ] Login to npm.
 - [ ] Add screenshots or terminal demo GIF.
 - [x] Add `CHANGELOG.md`.
 - [ ] Add GitHub repository URL in `package.json`.
