@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Added:
+
+- GitHub Action entrypoint with `base`, `head`, `json`, `fail-on-conflict`, and `working-directory` inputs.
+- GitHub Action outputs for `exit-code`, `conflict`, and `report`.
+
 ## 0.1.0
 
 Initial product-ready CLI prototype.

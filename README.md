@@ -100,6 +100,16 @@ node ./bin/branchguard.mjs matrix --base main --json
 
 See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a pull request conflict check example.
 
+Direct GitHub Action usage:
+
+```yaml
+- uses: wonderly321/branchguard-cli@main
+  with:
+    base: origin/main
+    head: HEAD
+    json: "true"
+```
+
 ## Risk Levels
 
 - `LOW`: no conflicts.
@@ -159,5 +169,6 @@ The specification-driven development docs are in [docs/sdd](./docs/sdd).
 ## Product Docs
 
 - [Product roadmap](./docs/product-roadmap.md)
+- [v0.1.0 release notes](./docs/releases/v0.1.0.md)
 - [Release checklist](./docs/release-checklist.md)
 - [npm publish guide](./docs/npm-publish.md)

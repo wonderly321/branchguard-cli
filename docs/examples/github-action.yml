@@ -14,13 +14,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install BranchGuard
-        run: npm install --global branchguard-cli
-
       - name: Check merge conflicts
-        run: branchguard check origin/main HEAD --json
+        uses: wonderly321/branchguard-cli@main
+        with:
+          base: origin/main
+          head: HEAD
+          json: "true"

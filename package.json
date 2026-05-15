@@ -15,6 +15,7 @@
     "branchguard": "bin/branchguard.mjs"
   },
   "files": [
+    "action.yml",
     "bin/",
     "docs/",
     "scripts/",
@@ -24,7 +25,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "node --check ./bin/branchguard.mjs && node --check ./test/branchguard.test.mjs",
+    "check": "node --check ./bin/branchguard.mjs && node --check ./bin/github-action.mjs && node --check ./test/branchguard.test.mjs",
     "prepack": "npm run check && npm test",
     "publish:beta:win": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-beta.ps1",
     "publish:beta:token:win": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-beta-with-token.ps1",

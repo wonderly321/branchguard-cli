@@ -1,0 +1,41 @@
+name: BranchGuard
+description: Check whether two Git refs can merge without conflicts.
+author: wonderly321
+
+branding:
+  icon: git-branch
+  color: blue
+
+inputs:
+  base:
+    description: Base ref to merge into.
+    required: false
+    default: origin/main
+  head:
+    description: Head ref to check.
+    required: false
+    default: HEAD
+  json:
+    description: Print BranchGuard JSON output.
+    required: false
+    default: "true"
+  fail-on-conflict:
+    description: Fail the workflow when BranchGuard detects conflicts.
+    required: false
+    default: "true"
+  working-directory:
+    description: Repository directory to run BranchGuard in.
+    required: false
+    default: .
+
+outputs:
+  exit-code:
+    description: BranchGuard exit code. 0 is clean, 1 is error, 2 is conflict.
+  conflict:
+    description: Whether BranchGuard detected conflicts.
+  report:
+    description: BranchGuard stdout report.
+
+runs:
+  using: node20
+  main: bin/github-action.mjs

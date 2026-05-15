@@ -23,7 +23,7 @@ Goal: Make BranchGuard useful in pull request workflows.
 
 Planned:
 
-- GitHub Action wrapper.
+- GitHub Action wrapper. (done on `main`; release as `v0.2.0`)
 - GitLab CI example.
 - Markdown report output.
 - PR comment body generation.

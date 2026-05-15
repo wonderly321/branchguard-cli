@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = join(rootDir, "bin", "branchguard.mjs");
+const action = join(rootDir, "bin", "github-action.mjs");
 const tempRoot = join(rootDir, ".tmp");
 
 test("prints version", () => {
@@ -123,6 +124,33 @@ test("matrix checks local branches against a base", () => {
   }
 });
 
+test("github action wrapper reports conflicts without failing when configured", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  try {
+    const result = runAction(repo, {
+      GITHUB_OUTPUT: outputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_JSON: "true",
+      INPUT_FAIL_ON_CONFLICT: "false",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /BranchGuard detected conflicts/);
+
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /exit-code<<branchguard_exit-code_/);
+    assert.match(output, /\n2\nbranchguard_exit-code_/);
+    assert.match(output, /conflict<<branchguard_conflict_/);
+    assert.match(output, /\ntrue\nbranchguard_conflict_/);
+    assert.match(output, /"has_conflict": true/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 function createFixtureRepo(options = {}) {
   const conflictFile = options.conflictFile || "app.txt";
   mkdirSync(tempRoot, { recursive: true });
@@ -173,6 +201,15 @@ function git(cwd, args) {
 
 function runCli(args, cwd, env = {}) {
   return spawnSync(process.execPath, [cli, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+    windowsHide: true,
+  });
+}
+
+function runAction(cwd, env = {}) {
+  return spawnSync(process.execPath, [action], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, ...env },
