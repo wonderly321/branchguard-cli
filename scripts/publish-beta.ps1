@@ -107,7 +107,7 @@ if ($packageJson.name -ne "@sonori/branchguard-cli") {
 
 $packageScope = ""
 if ($packageJson.name -match "^@([^/]+)/") {
-  $packageScope = $Matches[1]
+  $packageScope = "@$($Matches[1])"
 } else {
   throw "Package must be scoped so the temporary granular token can be limited to a scope."
 }
