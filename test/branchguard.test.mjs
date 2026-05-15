@@ -168,6 +168,35 @@ test("github action wrapper reports conflicts without failing when configured", 
   }
 });
 
+test("github action wrapper writes markdown step summary", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  const summaryPath = join(dirname(repo), "github-step-summary.md");
+  try {
+    const result = runAction(repo, {
+      GITHUB_OUTPUT: outputPath,
+      GITHUB_STEP_SUMMARY: summaryPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_CONFLICT: "false",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /summary-written<<branchguard_summary-written_/);
+    assert.match(output, /\ntrue\nbranchguard_summary-written_/);
+
+    const summary = readFileSync(summaryPath, "utf8");
+    assert.match(summary, /# BranchGuard Report/);
+    assert.match(summary, /\| `app.txt` \| content \| MEDIUM \|/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 function createFixtureRepo(options = {}) {
   const conflictFile = options.conflictFile || "app.txt";
   mkdirSync(tempRoot, { recursive: true });

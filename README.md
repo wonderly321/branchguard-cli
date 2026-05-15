@@ -124,6 +124,8 @@ Direct GitHub Action usage:
     format: markdown
 ```
 
+When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
+
 ## Risk Levels
 
 - `LOW`: no conflicts.

@@ -13,6 +13,7 @@ const base = getInput("base") || "origin/main";
 const head = getInput("head") || "HEAD";
 const format = normalizeFormat(getInput("format"), getInput("json"));
 const failOnConflict = parseBooleanInput(getInput("fail-on-conflict"), true);
+const writeStepSummary = parseBooleanInput(getInput("summary"), true);
 const workingDirectory = resolve(getInput("working-directory") || ".");
 
 const args = [cliPath, "check", base, head];
@@ -50,6 +51,8 @@ writeOutput("conflict", String(conflict));
 if (report) {
   writeOutput("report", report);
 }
+const summaryWritten = writeSummary(report, writeStepSummary);
+writeOutput("summary-written", String(summaryWritten));
 
 if (conflict && !failOnConflict) {
   console.log("BranchGuard detected conflicts, but fail-on-conflict is false.");
@@ -96,4 +99,13 @@ function writeOutput(name, value) {
 
   const delimiter = `branchguard_${name}_${Date.now()}`;
   appendFileSync(process.env.GITHUB_OUTPUT, `${name}<<${delimiter}\n${value}\n${delimiter}\n`, "utf8");
+}
+
+function writeSummary(report, enabled) {
+  if (!enabled || !report || !process.env.GITHUB_STEP_SUMMARY) {
+    return false;
+  }
+
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n`, "utf8");
+  return true;
 }
