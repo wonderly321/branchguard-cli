@@ -14,7 +14,7 @@ const { extractConflictFiles } = await import(pathToFileURL(cli).href);
 test("prints version", () => {
   const result = runCli(["--version"], rootDir);
   assert.equal(result.status, 0);
-  assert.match(result.stdout, /branchguard 0\.1\.0/);
+  assert.match(result.stdout, /branchguard 0\.2\.0/);
 });
 
 test("reports an error outside a git repository", () => {

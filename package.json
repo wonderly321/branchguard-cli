@@ -1,6 +1,6 @@
 {
   "name": "branchguard-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lightweight Git merge conflict pre-check CLI.",
   "type": "module",
   "homepage": "https://github.com/wonderly321/branchguard-cli#readme",

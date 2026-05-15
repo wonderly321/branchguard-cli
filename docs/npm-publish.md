@@ -82,7 +82,7 @@ branchguard doctor
 Promote to latest after smoke testing:
 
 ```bash
-npm dist-tag add branchguard-cli@0.1.0 latest
+npm dist-tag add branchguard-cli@0.2.0 latest
 ```
 
 ## Notes

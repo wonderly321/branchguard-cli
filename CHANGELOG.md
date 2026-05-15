@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+Prepared for npm release as `branchguard-cli@0.2.0`.
 
 Added:
 

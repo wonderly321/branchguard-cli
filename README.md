@@ -14,7 +14,7 @@ It answers one practical question before you merge:
 
 > Will this branch conflict with my base branch, and where?
 
-Current status: v0.1 prototype. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
+Current status: v0.2 CI-ready prototype. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
 
 ## Usage
 
@@ -185,6 +185,7 @@ The specification-driven development docs are in [docs/sdd](./docs/sdd).
 ## Product Docs
 
 - [Product roadmap](./docs/product-roadmap.md)
+- [v0.2.0 release notes](./docs/releases/v0.2.0.md)
 - [v0.1.0 release notes](./docs/releases/v0.1.0.md)
 - [Release checklist](./docs/release-checklist.md)
 - [npm publish guide](./docs/npm-publish.md)
