@@ -64,6 +64,12 @@ If OTP/token automation keeps failing, use the simpler token-only helper:
 powershell -ExecutionPolicy Bypass -File .\scripts\publish-beta-with-token.ps1
 ```
 
+For a full release, use the release helper. It publishes the current package version with the beta tag, smoke-tests npm installation, and promotes the same version to latest:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publish-release-with-token.ps1
+```
+
 It will:
 
 - run checks and tests
