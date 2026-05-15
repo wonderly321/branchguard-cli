@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Lightweight Git merge conflict pre-check CLI.",
   "type": "module",
+  "homepage": "https://github.com/wonderly321/branchguard-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wonderly321/branchguard-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wonderly321/branchguard-cli/issues"
+  },
   "bin": {
     "branchguard": "./bin/branchguard.mjs"
   },

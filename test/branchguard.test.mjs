@@ -19,7 +19,9 @@ test("reports an error outside a git repository", () => {
   mkdirSync(tempRoot, { recursive: true });
   const workdir = mkdtempSync(join(tempRoot, "branchguard-not-repo-"));
   try {
-    const result = runCli(["check", "main", "feature", "--json"], workdir);
+    const result = runCli(["check", "main", "feature", "--json"], workdir, {
+      GIT_CEILING_DIRECTORIES: tempRoot,
+    });
     assert.equal(result.status, 1);
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.error.code, "NOT_GIT_REPOSITORY");
@@ -169,10 +171,11 @@ function git(cwd, args) {
   return result;
 }
 
-function runCli(args, cwd) {
+function runCli(args, cwd, env = {}) {
   return spawnSync(process.execPath, [cli, ...args], {
     cwd,
     encoding: "utf8",
+    env: { ...process.env, ...env },
     windowsHide: true,
   });
 }

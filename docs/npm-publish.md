@@ -2,6 +2,12 @@
 
 Package name: `branchguard-cli`
 
+Repository:
+
+```text
+https://github.com/wonderly321/branchguard-cli
+```
+
 Installed command:
 
 ```bash

@@ -2,6 +2,10 @@
 
 BranchGuard is a lightweight Git merge conflict pre-check CLI.
 
+npm package: `branchguard-cli`
+
+Repository: [wonderly321/branchguard-cli](https://github.com/wonderly321/branchguard-cli)
+
 It answers one practical question before you merge:
 
 > Will this branch conflict with my base branch, and where?
