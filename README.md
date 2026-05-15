@@ -110,7 +110,9 @@ branchguard check main feature/login --markdown
 
 ## CI
 
-See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a pull request conflict check example.
+See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a GitHub pull request conflict check example.
+
+See [docs/examples/gitlab-ci.yml](./docs/examples/gitlab-ci.yml) for a GitLab merge request conflict check example.
 
 Direct GitHub Action usage:
 

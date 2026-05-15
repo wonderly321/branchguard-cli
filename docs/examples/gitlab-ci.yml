@@ -1,0 +1,15 @@
+stages:
+  - test
+
+branchguard-conflict-check:
+  image: node:20-alpine
+  stage: test
+  variables:
+    GIT_DEPTH: "0"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - npm install --global branchguard-cli
+    - git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+  script:
+    - branchguard check "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" HEAD --markdown

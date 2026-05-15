@@ -24,7 +24,7 @@ Goal: Make BranchGuard useful in pull request workflows.
 Planned:
 
 - GitHub Action wrapper. (done on `main`; release as `v0.2.0`)
-- GitLab CI example.
+- GitLab CI example. (done on `main`; release as `v0.2.0`)
 - Markdown report output. (done on `main`; release as `v0.2.0`)
 - PR comment body generation.
 - Better modern `git merge-tree --write-tree` parsing on newer Git versions.
