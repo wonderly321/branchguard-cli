@@ -29,6 +29,12 @@ Planned:
 - PR comment body generation.
 - Better modern `git merge-tree --write-tree` parsing on newer Git versions.
 
+Tracking issues:
+
+- GitHub Action wrapper
+- Markdown/JSON report polish
+- Modern Git merge-tree parser hardening
+
 ## v0.3: Team Workflow
 
 Goal: Make it valuable for small teams instead of only individuals.

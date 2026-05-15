@@ -1,5 +1,9 @@
 # BranchGuard
 
+[![npm version](https://img.shields.io/npm/v/branchguard-cli.svg)](https://www.npmjs.com/package/branchguard-cli)
+[![npm beta](https://img.shields.io/npm/v/branchguard-cli/beta.svg?label=beta)](https://www.npmjs.com/package/branchguard-cli)
+[![license](https://img.shields.io/npm/l/branchguard-cli.svg)](./LICENSE)
+
 BranchGuard is a lightweight Git merge conflict pre-check CLI.
 
 npm package: `branchguard-cli`
@@ -21,7 +25,7 @@ npm install --global branchguard-cli
 branchguard doctor
 ```
 
-Install from GitHub before npm is published:
+Install from GitHub:
 
 ```bash
 npm install --global github:wonderly321/branchguard-cli
