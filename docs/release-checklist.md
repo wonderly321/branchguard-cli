@@ -13,9 +13,9 @@ This checklist turns the current CLI into a release-ready v0.1.
 - [x] Create GitHub repository.
 - [x] Push initial `main` branch to GitHub.
 - [x] Add repository URL in `package.json`.
-- [ ] Login to npm.
-- [ ] Publish with OTP or granular token if npm requires 2FA.
-- [ ] Use `scripts/publish-beta.ps1` if direct npm publish is blocked by 2FA policy.
+- [x] Login to npm.
+- [x] Publish with granular token because npm required 2FA bypass for publishing.
+- [x] Use `scripts/publish-beta-with-token.ps1` when direct npm publish is blocked by 2FA policy.
 - [ ] Add screenshots or terminal demo GIF.
 - [x] Add `CHANGELOG.md`.
 - [ ] Add GitHub repository URL in `package.json`.
@@ -35,10 +35,18 @@ This checklist turns the current CLI into a release-ready v0.1.
 - [x] Confirm `branchguard-cli` is available.
 - [x] Add `files` allowlist.
 - [ ] Run `npm pack --dry-run`.
-- [ ] Publish beta tag first:
+- [x] Publish beta tag first:
 
 ```bash
 npm publish --tag beta
+```
+
+Published:
+
+```text
+branchguard-cli@0.1.0
+beta: 0.1.0
+latest: 0.1.0
 ```
 
 ## Binary Release Path

@@ -4,6 +4,8 @@
 
 Initial product-ready CLI prototype.
 
+Published to npm as `branchguard-cli@0.1.0`.
+
 Added:
 
 - `branchguard init`
