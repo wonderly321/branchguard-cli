@@ -57,12 +57,13 @@ function New-TokenArgs {
   param(
     [string]$Password,
     [string]$Otp,
-    [string]$Scope
+    [string]$Scope,
+    [string]$TokenName
   )
 
   $args = @(
     "token", "create",
-    "--name", "branchguard-cli-beta-publish",
+    "--name", $TokenName,
     "--token-description", "Temporary BranchGuard beta publish token",
     "--expires", "1",
     "--scopes", $Scope,
@@ -112,6 +113,8 @@ if ($packageJson.name -match "^@([^/]+)/") {
   throw "Package must be scoped so the temporary granular token can be limited to a scope."
 }
 
+$tokenName = "branchguard-cli-beta-publish-$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
+
 Write-Host "BranchGuard beta publish helper" -ForegroundColor Cyan
 Write-Host "Project: $projectRoot"
 Write-Host ""
@@ -147,7 +150,7 @@ $tokenOtp = Read-Host "npm 2FA OTP for token creation, or press Enter if npm doe
 
 $tokenResult = $null
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-  $tokenResult = Invoke-TokenCreate (New-TokenArgs -Password $password -Otp $tokenOtp -Scope $packageScope)
+  $tokenResult = Invoke-TokenCreate (New-TokenArgs -Password $password -Otp $tokenOtp -Scope $packageScope -TokenName $tokenName)
   if ($tokenResult.ExitCode -eq 0) {
     break
   }
