@@ -15,6 +15,7 @@ This checklist turns the current CLI into a release-ready v0.1.
 - [x] Add repository URL in `package.json`.
 - [ ] Login to npm.
 - [ ] Publish with OTP or granular token if npm requires 2FA.
+- [ ] Use `scripts/publish-beta.ps1` if direct npm publish is blocked by 2FA policy.
 - [ ] Add screenshots or terminal demo GIF.
 - [x] Add `CHANGELOG.md`.
 - [ ] Add GitHub repository URL in `package.json`.

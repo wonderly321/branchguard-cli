@@ -17,6 +17,7 @@
   "files": [
     "bin/",
     "docs/",
+    "scripts/",
     ".branchguard.json",
     "CHANGELOG.md",
     "README.md",
@@ -25,6 +26,7 @@
   "scripts": {
     "check": "node --check ./bin/branchguard.mjs && node --check ./test/branchguard.test.mjs",
     "prepack": "npm run check && npm test",
+    "publish:beta:win": "powershell -ExecutionPolicy Bypass -File ./scripts/publish-beta.ps1",
     "start": "node ./bin/branchguard.mjs",
     "test": "node --test"
   },

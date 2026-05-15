@@ -52,6 +52,20 @@ npm publish --tag beta --otp <one-time-code> --cache .npm-cache
 
 Alternative: create a granular access token on npm with package publishing permission and 2FA bypass enabled, then configure it in your user `.npmrc`.
 
+On Windows, the helper script automates the publish flow without putting secrets in chat:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publish-beta.ps1
+```
+
+It will:
+
+- run checks and tests
+- try direct OTP publish
+- if needed, create a short-lived granular token with `--bypass-2fa`
+- publish through a temporary `.npmrc`
+- delete the temporary `.npmrc`
+
 Install beta:
 
 ```bash
