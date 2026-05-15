@@ -1,0 +1,40 @@
+{
+  "name": "branchguard-cli",
+  "version": "0.1.0",
+  "description": "Lightweight Git merge conflict pre-check CLI.",
+  "type": "module",
+  "bin": {
+    "branchguard": "./bin/branchguard.mjs"
+  },
+  "files": [
+    "bin/",
+    "docs/",
+    ".branchguard.json",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node --check ./bin/branchguard.mjs && node --check ./test/branchguard.test.mjs",
+    "prepack": "npm run check && npm test",
+    "start": "node ./bin/branchguard.mjs",
+    "test": "node --test"
+  },
+  "keywords": [
+    "git",
+    "merge",
+    "conflict",
+    "cli",
+    "pre-merge",
+    "branch",
+    "ci"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

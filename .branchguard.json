@@ -1,0 +1,21 @@
+{
+  "highRiskPatterns": [
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "go.sum",
+    "composer.lock",
+    "db/migrations/**",
+    "migrations/**",
+    "schema/**",
+    "openapi/**",
+    "**/*.proto",
+    "**/*.graphql"
+  ],
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "node_modules/**"
+  ]
+}
