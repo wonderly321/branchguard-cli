@@ -20,7 +20,7 @@ jobs:
           node-version: 24
 
       - name: Install BranchGuard
-        run: npm install --global branchguard-cli
+        run: npm install --global @sonori/branchguard-cli
 
       - name: Check merge conflicts
         run: branchguard check origin/main HEAD --json

@@ -2,7 +2,7 @@
 
 BranchGuard is a lightweight Git merge conflict pre-check CLI.
 
-npm package: `branchguard-cli`
+npm package: `@sonori/branchguard-cli`
 
 Repository: [wonderly321/branchguard-cli](https://github.com/wonderly321/branchguard-cli)
 
@@ -17,7 +17,7 @@ Current status: v0.1 prototype. The implementation is a zero-dependency Node.js 
 Install from npm:
 
 ```bash
-npm install --global branchguard-cli
+npm install --global @sonori/branchguard-cli
 branchguard doctor
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "branchguard-cli",
+  "name": "@sonori/branchguard-cli",
   "version": "0.1.0",
   "description": "Lightweight Git merge conflict pre-check CLI.",
   "type": "module",

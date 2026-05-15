@@ -6,7 +6,7 @@ Goal: A usable local CLI that can be shared with developers.
 
 Included:
 
-- npm package name: `branchguard-cli`
+- npm package name: `@sonori/branchguard-cli`
 - command name: `branchguard`
 - `branchguard init`
 - `branchguard doctor`

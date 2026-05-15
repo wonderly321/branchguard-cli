@@ -56,7 +56,8 @@ function Get-TokenFromJson {
 function New-TokenArgs {
   param(
     [string]$Password,
-    [string]$Otp
+    [string]$Otp,
+    [string]$Scope
   )
 
   $args = @(
@@ -64,7 +65,7 @@ function New-TokenArgs {
     "--name", "branchguard-cli-beta-publish",
     "--token-description", "Temporary BranchGuard beta publish token",
     "--expires", "1",
-    "--packages-all",
+    "--scopes", $Scope,
     "--packages-and-scopes-permission", "read-write",
     "--bypass-2fa",
     "--password", $Password,
@@ -100,8 +101,15 @@ $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $projectRoot
 
 $packageJson = Get-Content -Raw -Encoding UTF8 "package.json" | ConvertFrom-Json
-if ($packageJson.name -ne "branchguard-cli") {
+if ($packageJson.name -ne "@sonori/branchguard-cli") {
   throw "Refusing to publish unexpected package '$($packageJson.name)'."
+}
+
+$packageScope = ""
+if ($packageJson.name -match "^@([^/]+)/") {
+  $packageScope = $Matches[1]
+} else {
+  throw "Package must be scoped so the temporary granular token can be limited to a scope."
 }
 
 Write-Host "BranchGuard beta publish helper" -ForegroundColor Cyan
@@ -120,7 +128,7 @@ if (-not $SkipDirectPublish) {
 
   if ($Otp) {
     Write-Host "Trying direct npm publish with OTP..." -ForegroundColor Cyan
-    & npm.cmd publish --tag beta --otp $Otp --cache .npm-cache --registry https://registry.npmjs.org/
+    & npm.cmd publish --tag beta --access public --otp $Otp --cache .npm-cache --registry https://registry.npmjs.org/
     if ($LASTEXITCODE -eq 0) {
       Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
       exit 0
@@ -139,7 +147,7 @@ $tokenOtp = Read-Host "npm 2FA OTP for token creation, or press Enter if npm doe
 
 $tokenResult = $null
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-  $tokenResult = Invoke-TokenCreate (New-TokenArgs -Password $password -Otp $tokenOtp)
+  $tokenResult = Invoke-TokenCreate (New-TokenArgs -Password $password -Otp $tokenOtp -Scope $packageScope)
   if ($tokenResult.ExitCode -eq 0) {
     break
   }
@@ -175,7 +183,7 @@ registry=https://registry.npmjs.org/
 "@
 
   Write-Host "Publishing with temporary token..." -ForegroundColor Cyan
-  & npm.cmd publish --tag beta --cache .npm-cache --userconfig $tempNpmrc
+  & npm.cmd publish --tag beta --access public --cache .npm-cache --userconfig $tempNpmrc
   if ($LASTEXITCODE -ne 0) {
     throw "npm publish failed with exit code $LASTEXITCODE"
   }

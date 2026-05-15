@@ -5,7 +5,7 @@ This checklist turns the current CLI into a release-ready v0.1.
 ## Required Before v0.1
 
 - [ ] Decide final product name.
-- [x] Decide npm package name: `branchguard-cli`.
+- [x] Decide npm package name: `@sonori/branchguard-cli`.
 - [x] Decide distribution path: npm package first.
 - [x] Add license.
 - [x] Confirm MIT open-source route.
@@ -32,7 +32,7 @@ This checklist turns the current CLI into a release-ready v0.1.
 
 - [x] Remove `"private": true` from `package.json`.
 - [x] Confirm `branchguard` is taken.
-- [x] Confirm `branchguard-cli` is available.
+- [x] Use scoped npm package because `branchguard-cli` unscoped publish is blocked by token scoping for first release.
 - [x] Add `files` allowlist.
 - [ ] Run `npm pack --dry-run`.
 - [ ] Publish beta tag first:
