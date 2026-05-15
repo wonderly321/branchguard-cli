@@ -7,11 +7,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Invoke-Npm {
-  param([string[]]$Args)
+  param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$NpmArgs
+  )
 
-  & npm.cmd @Args
+  & npm.cmd @NpmArgs
   if ($LASTEXITCODE -ne 0) {
-    throw "npm $($Args -join ' ') failed with exit code $LASTEXITCODE"
+    throw "npm $($NpmArgs -join ' ') failed with exit code $LASTEXITCODE"
   }
 }
 
@@ -62,11 +65,10 @@ Write-Host "BranchGuard beta publish helper" -ForegroundColor Cyan
 Write-Host "Project: $projectRoot"
 Write-Host ""
 
-Invoke-Npm @("config", "set", "registry", "https://registry.npmjs.org/")
-Invoke-Npm @("whoami", "--registry", "https://registry.npmjs.org/")
-Invoke-Npm @("run", "check")
-Invoke-Npm @("test")
-Invoke-Npm @("pack", "--dry-run", "--cache", ".npm-cache")
+Invoke-Npm "whoami" "--registry" "https://registry.npmjs.org/"
+Invoke-Npm "run" "check"
+Invoke-Npm "test"
+Invoke-Npm "pack" "--dry-run" "--cache" ".npm-cache"
 
 if (-not $SkipDirectPublish) {
   if (-not $Otp) {
@@ -75,7 +77,7 @@ if (-not $SkipDirectPublish) {
 
   if ($Otp) {
     Write-Host "Trying direct npm publish with OTP..." -ForegroundColor Cyan
-    & npm.cmd publish --tag beta --otp $Otp --cache .npm-cache
+    & npm.cmd publish --tag beta --otp $Otp --cache .npm-cache --registry https://registry.npmjs.org/
     if ($LASTEXITCODE -eq 0) {
       Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
       exit 0
