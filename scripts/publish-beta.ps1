@@ -98,6 +98,54 @@ function Invoke-TokenCreate {
   }
 }
 
+function Invoke-PublishWithToken {
+  param(
+    [string]$Token,
+    [string]$Label
+  )
+
+  New-Item -ItemType Directory -Force ".tmp" | Out-Null
+  $tempNpmrc = Join-Path ".tmp" "publish.npmrc"
+
+  try {
+    Set-Content -Encoding UTF8 -Path $tempNpmrc -Value @"
+registry=https://registry.npmjs.org/
+//registry.npmjs.org/:_authToken=$Token
+"@
+
+    Write-Host "Publishing with $Label..." -ForegroundColor Cyan
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+      $output = & npm.cmd publish --tag beta --access public --cache .npm-cache --userconfig $tempNpmrc 2>&1
+      $exitCode = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    $text = $output -join "`n"
+    if ($exitCode -ne 0) {
+      $redactedOutput = $text -replace "npm_[A-Za-z0-9_\-]+", "npm_***redacted***"
+      Write-Host $redactedOutput
+      return @{
+        Ok = $false
+        ExitCode = $exitCode
+        Text = $text
+      }
+    }
+
+    Write-Host $text
+    return @{
+      Ok = $true
+      ExitCode = 0
+      Text = $text
+    }
+  } finally {
+    Remove-Item -LiteralPath $tempNpmrc -Force -ErrorAction SilentlyContinue
+  }
+}
+
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $projectRoot
 
@@ -175,23 +223,34 @@ if (-not $tokenResult -or $tokenResult.ExitCode -ne 0) {
 }
 
 $token = Get-TokenFromJson $tokenResult.Text
+$publishResult = Invoke-PublishWithToken -Token $token -Label "temporary CLI-created token"
+if ($publishResult.Ok) {
+  Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
+  exit 0
+}
 
-New-Item -ItemType Directory -Force ".tmp" | Out-Null
-$tempNpmrc = Join-Path ".tmp" "publish.npmrc"
+if ($publishResult.Text -match "E404" -or $publishResult.Text -match "not found" -or $publishResult.Text -match "permission") {
+  Write-Host ""
+  Write-Host "The CLI-created token could not publish the first package under this scope." -ForegroundColor Yellow
+  Write-Host "Opening npm token settings. Create a Granular Access Token with:" -ForegroundColor Yellow
+  Write-Host "- Read and write package access"
+  Write-Host "- Scope/package access for @sonori or all packages"
+  Write-Host "- Bypass 2FA enabled"
+  Write-Host "Then paste the token into this PowerShell window. Do not paste it into chat."
+  Start-Process "https://www.npmjs.com/settings/sonori/tokens"
 
-try {
-  Set-Content -Encoding UTF8 -Path $tempNpmrc -Value @"
-registry=https://registry.npmjs.org/
-//registry.npmjs.org/:_authToken=$token
-"@
-
-  Write-Host "Publishing with temporary token..." -ForegroundColor Cyan
-  & npm.cmd publish --tag beta --access public --cache .npm-cache --userconfig $tempNpmrc
-  if ($LASTEXITCODE -ne 0) {
-    throw "npm publish failed with exit code $LASTEXITCODE"
+  $secureManualToken = Read-Host "Paste npm granular token with bypass 2FA" -AsSecureString
+  $manualToken = ConvertFrom-SecureStringPlainText $secureManualToken
+  if (-not $manualToken) {
+    throw "No manual npm token provided."
   }
 
-  Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
-} finally {
-  Remove-Item -LiteralPath $tempNpmrc -Force -ErrorAction SilentlyContinue
+  $manualPublishResult = Invoke-PublishWithToken -Token $manualToken -Label "manual npm granular token"
+  $manualToken = $null
+  if ($manualPublishResult.Ok) {
+    Write-Host "Published branchguard-cli beta successfully." -ForegroundColor Green
+    exit 0
+  }
 }
+
+throw "npm publish failed with exit code $($publishResult.ExitCode)"
