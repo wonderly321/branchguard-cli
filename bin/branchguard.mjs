@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const VERSION = "0.1.0";
 const EXIT_OK = 0;
@@ -664,6 +665,12 @@ function extractConflictFiles(output) {
       continue;
     }
 
+    const conflictPath = extractModernConflictPath(trimmed);
+    if (conflictPath) {
+      files.push(conflictPath);
+      continue;
+    }
+
     const tabParts = trimmed.split(/\t+/);
     const candidate = tabParts[tabParts.length - 1];
     if (looksLikePath(candidate)) {
@@ -671,6 +678,20 @@ function extractConflictFiles(output) {
     }
   }
   return files;
+}
+
+function extractModernConflictPath(line) {
+  const mergeConflict = line.match(/^CONFLICT \([^)]+\): Merge conflict in (.+)$/);
+  if (mergeConflict) {
+    return mergeConflict[1].trim();
+  }
+
+  const leftInTree = line.match(/^CONFLICT \([^)]+\): .* of (.+?) left in tree\.?$/);
+  if (leftInTree) {
+    return leftInTree[1].trim();
+  }
+
+  return "";
 }
 
 function extractDeprecatedConflictFiles(output) {
@@ -739,10 +760,25 @@ function normalizePath(path) {
 }
 
 function looksLikePath(value) {
-  if (!value || value.includes(" ")) {
+  if (!value) {
     return false;
   }
-  return value.includes("/") || value.includes("\\") || value.includes(".");
+
+  const trimmed = value.trim();
+  if (
+    !trimmed ||
+    /^(CONFLICT|Auto-merging|warning:|error:|fatal:)\b/i.test(trimmed) ||
+    /^[0-9a-f]{7,64}$/i.test(trimmed)
+  ) {
+    return false;
+  }
+
+  return (
+    trimmed.includes("/") ||
+    trimmed.includes("\\") ||
+    trimmed.includes(".") ||
+    /^[^\s:]+$/.test(trimmed)
+  );
 }
 
 function printCheckResult(result) {
@@ -915,4 +951,12 @@ function escapeMarkdownCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
-main();
+function isMainModule() {
+  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+
+if (isMainModule()) {
+  main();
+}
+
+export { extractConflictFiles, extractDeprecatedConflictFiles };

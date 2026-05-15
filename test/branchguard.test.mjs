@@ -3,12 +3,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = join(rootDir, "bin", "branchguard.mjs");
 const action = join(rootDir, "bin", "github-action.mjs");
 const tempRoot = join(rootDir, ".tmp");
+const { extractConflictFiles } = await import(pathToFileURL(cli).href);
 
 test("prints version", () => {
   const result = runCli(["--version"], rootDir);
@@ -122,6 +123,24 @@ test("matrix checks local branches against a base", () => {
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
+});
+
+test("parses modern merge-tree conflict output", () => {
+  const output = [
+    "Auto-merging app.txt",
+    "CONFLICT (content): Merge conflict in app.txt",
+    "CONFLICT (add/add): Merge conflict in src/with space.txt",
+    "100644 abcdef1234567890 1\tpackage-lock.json",
+    "README",
+    "fatal: not a path",
+  ].join("\n");
+
+  assert.deepEqual(extractConflictFiles(output).sort(), [
+    "README",
+    "app.txt",
+    "package-lock.json",
+    "src/with space.txt",
+  ]);
 });
 
 test("prints markdown reports for check and matrix", () => {

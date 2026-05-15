@@ -9,6 +9,7 @@ Added:
 - Markdown output for `check`, `matrix`, and the GitHub Action `format` input.
 - GitHub Action step summary support.
 - GitLab CI merge request example.
+- Modern `git merge-tree --write-tree` conflict output parser hardening.
 
 ## 0.1.0
 
