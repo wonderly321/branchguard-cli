@@ -11,13 +11,15 @@ const cliPath = resolve(actionRoot, "bin", "branchguard.mjs");
 
 const base = getInput("base") || "origin/main";
 const head = getInput("head") || "HEAD";
-const json = parseBooleanInput(getInput("json"), true);
+const format = normalizeFormat(getInput("format"), getInput("json"));
 const failOnConflict = parseBooleanInput(getInput("fail-on-conflict"), true);
 const workingDirectory = resolve(getInput("working-directory") || ".");
 
 const args = [cliPath, "check", base, head];
-if (json) {
+if (format === "json") {
   args.push("--json");
+} else if (format === "markdown") {
+  args.push("--markdown");
 }
 
 const result = spawnSync(process.execPath, args, {
@@ -60,6 +62,15 @@ function getInput(name) {
   const exactKey = `INPUT_${name.replace(/ /g, "_").toUpperCase()}`;
   const normalizedKey = `INPUT_${name.replace(/[\s-]+/g, "_").toUpperCase()}`;
   return (process.env[exactKey] || process.env[normalizedKey] || "").trim();
+}
+
+function normalizeFormat(formatInput, jsonInput) {
+  const format = String(formatInput || "").trim().toLowerCase();
+  if (["json", "markdown", "text"].includes(format)) {
+    return format;
+  }
+
+  return parseBooleanInput(jsonInput, true) ? "json" : "text";
 }
 
 function parseBooleanInput(value, fallback) {

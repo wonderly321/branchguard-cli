@@ -38,6 +38,7 @@ Run from inside a Git repository:
 branchguard init
 branchguard check main feature/login
 branchguard check main feature/login --json
+branchguard check main feature/login --markdown
 branchguard matrix --base main
 ```
 
@@ -78,6 +79,7 @@ Example:
 
 ```bash
 node ./bin/branchguard.mjs check main feature/login
+node ./bin/branchguard.mjs check main feature/login --markdown
 ```
 
 Exit codes:
@@ -94,6 +96,16 @@ Checks all local branches against a base branch.
 node ./bin/branchguard.mjs matrix --base main
 node ./bin/branchguard.mjs matrix --base main --limit 20
 node ./bin/branchguard.mjs matrix --base main --json
+node ./bin/branchguard.mjs matrix --base main --markdown
+```
+
+## Output Formats
+
+BranchGuard supports human text output by default, plus JSON and Markdown for automation:
+
+```bash
+branchguard check main feature/login --json
+branchguard check main feature/login --markdown
 ```
 
 ## CI
@@ -107,7 +119,7 @@ Direct GitHub Action usage:
   with:
     base: origin/main
     head: HEAD
-    json: "true"
+    format: markdown
 ```
 
 ## Risk Levels

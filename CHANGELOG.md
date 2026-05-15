@@ -6,6 +6,7 @@ Added:
 
 - GitHub Action entrypoint with `base`, `head`, `json`, `fail-on-conflict`, and `working-directory` inputs.
 - GitHub Action outputs for `exit-code`, `conflict`, and `report`.
+- Markdown output for `check`, `matrix`, and the GitHub Action `format` input.
 
 ## 0.1.0
 

@@ -16,9 +16,13 @@ inputs:
     required: false
     default: HEAD
   json:
-    description: Print BranchGuard JSON output.
+    description: Print BranchGuard JSON output. Prefer format for new workflows.
     required: false
     default: "true"
+  format:
+    description: Output format. Supported values are json, markdown, and text.
+    required: false
+    default: json
   fail-on-conflict:
     description: Fail the workflow when BranchGuard detects conflicts.
     required: false

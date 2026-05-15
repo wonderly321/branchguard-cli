@@ -124,6 +124,23 @@ test("matrix checks local branches against a base", () => {
   }
 });
 
+test("prints markdown reports for check and matrix", () => {
+  const repo = createFixtureRepo();
+  try {
+    const check = runCli(["check", "main", "feature-conflict", "--markdown"], repo);
+    assert.equal(check.status, 2);
+    assert.match(check.stdout, /# BranchGuard Report/);
+    assert.match(check.stdout, /\| `app.txt` \| content \| MEDIUM \|/);
+
+    const matrix = runCli(["matrix", "--base", "main", "--markdown"], repo);
+    assert.equal(matrix.status, 2);
+    assert.match(matrix.stdout, /# BranchGuard Matrix/);
+    assert.match(matrix.stdout, /\| `feature-conflict` \| 1 \| MEDIUM \|/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("github action wrapper reports conflicts without failing when configured", () => {
   const repo = createFixtureRepo();
   const outputPath = join(dirname(repo), "github-output.txt");

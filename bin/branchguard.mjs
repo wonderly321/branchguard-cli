@@ -129,8 +129,13 @@ function handleInit(args) {
 }
 
 function handleCheck(args) {
-  const json = args.includes("--json");
-  const positional = args.filter((arg) => arg !== "--json");
+  const output = parseOutputFormat(args);
+  if (output.error) {
+    printMaybeJsonError(output.error, output.format === "json");
+    return EXIT_ERROR;
+  }
+
+  const positional = args.filter((arg) => arg !== "--json" && arg !== "--markdown");
 
   if (positional.length !== 2) {
     const error = {
@@ -138,31 +143,33 @@ function handleCheck(args) {
       message: "check requires <base> and <head>",
       hint: "example: branchguard check main feature/login",
     };
-    printMaybeJsonError(error, json);
+    printMaybeJsonError(error, output.format === "json");
     return EXIT_ERROR;
   }
 
   const [base, head] = positional;
   const preflight = preflightCheck(base, head);
   if (!preflight.ok) {
-    printMaybeJsonError(preflight.error, json);
+    printMaybeJsonError(preflight.error, output.format === "json");
     return EXIT_ERROR;
   }
 
   const config = loadConfig();
   if (config.error) {
-    printMaybeJsonError(config.error, json);
+    printMaybeJsonError(config.error, output.format === "json");
     return EXIT_ERROR;
   }
 
   const result = checkBranches(base, head, config);
   if (result.error) {
-    printMaybeJsonError(result.error, json);
+    printMaybeJsonError(result.error, output.format === "json");
     return EXIT_ERROR;
   }
 
-  if (json) {
+  if (output.format === "json") {
     console.log(JSON.stringify(result, null, 2));
+  } else if (output.format === "markdown") {
+    printCheckMarkdown(result);
   } else {
     printCheckResult(result);
   }
@@ -173,13 +180,13 @@ function handleCheck(args) {
 function handleMatrix(args) {
   const options = parseMatrixArgs(args);
   if (options.error) {
-    printMaybeJsonError(options.error, options.json);
+    printMaybeJsonError(options.error, options.format === "json");
     return EXIT_ERROR;
   }
 
   const repo = preflightRepo();
   if (!repo.ok) {
-    printMaybeJsonError(repo.error, options.json);
+    printMaybeJsonError(repo.error, options.format === "json");
     return EXIT_ERROR;
   }
 
@@ -191,20 +198,20 @@ function handleMatrix(args) {
         message: `base ref "${options.base}" not found or is not a commit`,
         hint: "run `git branch --all` to check available branches",
       },
-      options.json,
+      options.format === "json",
     );
     return EXIT_ERROR;
   }
 
   const config = loadConfig();
   if (config.error) {
-    printMaybeJsonError(config.error, options.json);
+    printMaybeJsonError(config.error, options.format === "json");
     return EXIT_ERROR;
   }
 
   const branchesResult = listLocalBranches();
   if (branchesResult.error) {
-    printMaybeJsonError(branchesResult.error, options.json);
+    printMaybeJsonError(branchesResult.error, options.format === "json");
     return EXIT_ERROR;
   }
 
@@ -216,7 +223,7 @@ function handleMatrix(args) {
   for (const branch of branches) {
     const result = checkBranches(options.base, branch, config);
     if (result.error) {
-      printMaybeJsonError(result.error, options.json);
+      printMaybeJsonError(result.error, options.format === "json");
       return EXIT_ERROR;
     }
     entries.push({
@@ -234,8 +241,10 @@ function handleMatrix(args) {
     entries,
   };
 
-  if (options.json) {
+  if (options.format === "json") {
     console.log(JSON.stringify(matrix, null, 2));
+  } else if (options.format === "markdown") {
+    printMatrixMarkdown(matrix);
   } else {
     printMatrixResult(matrix);
   }
@@ -246,14 +255,19 @@ function handleMatrix(args) {
 function parseMatrixArgs(args) {
   const result = {
     base: "",
-    json: false,
+    format: "text",
     limit: 20,
   };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--json") {
-      result.json = true;
+    if (arg === "--json" || arg === "--markdown") {
+      const output = parseOutputFormat([arg], result.format);
+      if (output.error) {
+        result.error = output.error;
+        return result;
+      }
+      result.format = output.format;
       continue;
     }
 
@@ -293,6 +307,29 @@ function parseMatrixArgs(args) {
       message: "matrix requires --base <base>",
       hint: "example: branchguard matrix --base main",
     };
+  }
+
+  return result;
+}
+
+function parseOutputFormat(args, currentFormat = "text") {
+  const result = { format: currentFormat };
+
+  for (const arg of args) {
+    if (arg !== "--json" && arg !== "--markdown") {
+      continue;
+    }
+
+    const nextFormat = arg === "--json" ? "json" : "markdown";
+    if (result.format !== "text" && result.format !== nextFormat) {
+      result.error = {
+        code: "OUTPUT_FORMAT_CONFLICT",
+        message: "choose only one output format",
+        hint: "use either --json or --markdown",
+      };
+      return result;
+    }
+    result.format = nextFormat;
   }
 
   return result;
@@ -737,6 +774,39 @@ function printCheckResult(result) {
   }
 }
 
+function printCheckMarkdown(result) {
+  console.log("# BranchGuard Report");
+  console.log("");
+  console.log(`**Base:** ${inlineCode(result.base)}`);
+  console.log(`**Head:** ${inlineCode(result.head)}`);
+  console.log(`**Risk:** ${result.risk_level}`);
+  console.log(`**Conflicts:** ${result.conflict_count} file${result.conflict_count === 1 ? "" : "s"}`);
+  console.log("");
+  console.log(result.summary);
+
+  if (result.conflict_files.length > 0) {
+    console.log("");
+    console.log("| File | Type | Risk |");
+    console.log("| --- | --- | --- |");
+    for (const file of result.conflict_files) {
+      console.log(`| ${inlineCode(file.path)} | ${escapeMarkdownCell(file.type)} | ${escapeMarkdownCell(file.risk)} |`);
+    }
+    console.log("");
+    console.log("## Recommendation");
+    console.log("");
+    console.log("- Merge or rebase this branch sooner.");
+    console.log("- Coordinate with owners of the conflicting files.");
+    if (result.risk_level === "HIGH") {
+      console.log("- Review high-risk files carefully before merging.");
+    }
+  }
+
+  if (result.ignored_conflict_count > 0) {
+    console.log("");
+    console.log(`Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}.`);
+  }
+}
+
 function printMatrixResult(matrix) {
   console.log("BranchGuard Matrix");
   console.log(`Base: ${matrix.base}`);
@@ -767,6 +837,28 @@ function printMatrixResult(matrix) {
   }
 }
 
+function printMatrixMarkdown(matrix) {
+  console.log("# BranchGuard Matrix");
+  console.log("");
+  console.log(`**Base:** ${inlineCode(matrix.base)}`);
+  console.log(`**Branches:** ${matrix.branch_count}`);
+
+  if (matrix.entries.length === 0) {
+    console.log("");
+    console.log("No local branches to compare.");
+    return;
+  }
+
+  console.log("");
+  console.log("| Branch | Conflicts | Risk |");
+  console.log("| --- | ---: | --- |");
+  for (const entry of matrix.entries) {
+    console.log(
+      `| ${inlineCode(entry.branch)} | ${entry.conflict_count} | ${escapeMarkdownCell(entry.risk_level)} |`,
+    );
+  }
+}
+
 function printDoctor(result) {
   console.log("BranchGuard Doctor");
   console.log("");
@@ -781,8 +873,8 @@ function printHelp() {
 
 Usage:
   branchguard init [--force] [--json]
-  branchguard check <base> <head> [--json]
-  branchguard matrix --base <base> [--limit 20] [--json]
+  branchguard check <base> <head> [--json|--markdown]
+  branchguard matrix --base <base> [--limit 20] [--json|--markdown]
   branchguard doctor
   branchguard --version
   branchguard --help
@@ -791,6 +883,7 @@ Examples:
   branchguard init
   branchguard check main feature/login
   branchguard check origin/main HEAD --json
+  branchguard check origin/main HEAD --markdown
   branchguard matrix --base main
 `);
 }
@@ -812,6 +905,14 @@ function printMaybeJsonError(error, json) {
 
 function padRight(value, width) {
   return value + " ".repeat(Math.max(0, width - value.length));
+}
+
+function inlineCode(value) {
+  return `\`${String(value).replaceAll("`", "\\`")}\``;
+}
+
+function escapeMarkdownCell(value) {
+  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 main();

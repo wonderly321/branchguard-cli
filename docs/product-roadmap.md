@@ -25,7 +25,7 @@ Planned:
 
 - GitHub Action wrapper. (done on `main`; release as `v0.2.0`)
 - GitLab CI example.
-- Markdown report output.
+- Markdown report output. (done on `main`; release as `v0.2.0`)
 - PR comment body generation.
 - Better modern `git merge-tree --write-tree` parsing on newer Git versions.
 
