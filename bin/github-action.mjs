@@ -14,6 +14,7 @@ const head = getInput("head") || "HEAD";
 const format = normalizeFormat(getInput("format"), getInput("json"));
 const failOnConflict = parseBooleanInput(getInput("fail-on-conflict"), true);
 const writeStepSummary = parseBooleanInput(getInput("summary"), true);
+const summaryTitle = getInput("summary-title") || "BranchGuard CI Summary";
 const writePrComment = parseBooleanInput(getInput("comment"), false);
 const commentHeader = getInput("comment-header") || "<!-- branchguard-report -->";
 const githubToken = getInput("github-token") || process.env.GITHUB_TOKEN || "";
@@ -48,13 +49,23 @@ if (result.error) {
 const exitCode = result.error ? 1 : typeof result.status === "number" ? result.status : 1;
 const conflict = exitCode === 2;
 const report = (result.stdout || "").trim();
+const workflowWillFail = exitCode === 1 || (conflict && failOnConflict);
 
 writeOutput("exit-code", String(exitCode));
 writeOutput("conflict", String(conflict));
 if (report) {
   writeOutput("report", report);
 }
-const summaryWritten = writeSummary(report, writeStepSummary);
+const summaryWritten = writeSummary(report, {
+  enabled: writeStepSummary,
+  title: summaryTitle,
+  base,
+  head,
+  exitCode,
+  conflict,
+  format,
+  workflowWillFail,
+});
 writeOutput("summary-written", String(summaryWritten));
 
 const commentResult = await upsertPullRequestComment(report, {
@@ -119,13 +130,70 @@ function writeOutput(name, value) {
   appendFileSync(process.env.GITHUB_OUTPUT, `${name}<<${delimiter}\n${value}\n${delimiter}\n`, "utf8");
 }
 
-function writeSummary(report, enabled) {
-  if (!enabled || !report || !process.env.GITHUB_STEP_SUMMARY) {
+function writeSummary(report, options) {
+  if (!options.enabled || !report || !process.env.GITHUB_STEP_SUMMARY) {
     return false;
   }
 
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n`, "utf8");
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${buildStepSummary(report, options)}\n`, "utf8");
   return true;
+}
+
+function buildStepSummary(report, options) {
+  const resultLabel =
+    options.exitCode === 1
+      ? "Error"
+      : options.conflict
+        ? "Conflicts detected"
+        : "No conflicts detected";
+  const workflowLabel = options.workflowWillFail ? "Failing" : "Passing";
+  const recommendation =
+    options.exitCode === 1
+      ? "Check the action logs and verify both Git refs are available."
+      : options.conflict
+        ? "Resolve or rebase the branch before merging. Start with the highest-risk directory in the detailed report."
+        : "No merge-conflict action needed.";
+
+  return [
+    `# ${options.title}`,
+    "",
+    "| Field | Value |",
+    "| --- | --- |",
+    `| Result | ${escapeMarkdownCell(resultLabel)} |`,
+    `| Base | ${inlineCode(options.base)} |`,
+    `| Head | ${inlineCode(options.head)} |`,
+    `| Exit code | ${inlineCode(String(options.exitCode))} |`,
+    `| Workflow status | ${escapeMarkdownCell(workflowLabel)} |`,
+    "",
+    "## Recommended Next Step",
+    "",
+    recommendation,
+    "",
+    "## Detailed Report",
+    "",
+    formatDetailedReport(report, options.format),
+  ].join("\n");
+}
+
+function formatDetailedReport(report, format) {
+  if (format === "markdown") {
+    return demoteMarkdownHeadings(report);
+  }
+
+  const fence = format === "json" ? "json" : "text";
+  return `\`\`\`${fence}\n${report}\n\`\`\``;
+}
+
+function demoteMarkdownHeadings(markdown) {
+  return markdown.replace(/^(#{1,5})\s/gm, "#$1 ");
+}
+
+function inlineCode(value) {
+  return `\`${String(value).replaceAll("`", "\\`")}\``;
+}
+
+function escapeMarkdownCell(value) {
+  return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 async function upsertPullRequestComment(report, options) {

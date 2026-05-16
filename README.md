@@ -158,6 +158,8 @@ For the published v0.2.0 action, pin the action without PR comments:
 
 When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
 
+The step summary includes a scan-friendly result table, recommended next step, and detailed report.
+
 When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
 
 ## Risk Levels

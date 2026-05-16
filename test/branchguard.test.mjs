@@ -282,6 +282,7 @@ test("github action wrapper writes markdown step summary", () => {
       INPUT_BASE: "main",
       INPUT_HEAD: "feature-conflict",
       INPUT_FORMAT: "markdown",
+      INPUT_SUMMARY_TITLE: "BranchGuard Pull Request Check",
       INPUT_FAIL_ON_CONFLICT: "false",
       INPUT_WORKING_DIRECTORY: repo,
     });
@@ -293,7 +294,12 @@ test("github action wrapper writes markdown step summary", () => {
     assert.match(output, /\ntrue\nbranchguard_summary-written_/);
 
     const summary = readFileSync(summaryPath, "utf8");
-    assert.match(summary, /# BranchGuard Report/);
+    assert.match(summary, /# BranchGuard Pull Request Check/);
+    assert.match(summary, /\| Result \| Conflicts detected \|/);
+    assert.match(summary, /\| Workflow status \| Passing \|/);
+    assert.match(summary, /## Recommended Next Step/);
+    assert.match(summary, /## Detailed Report/);
+    assert.match(summary, /## BranchGuard Report/);
     assert.match(summary, /\| `app.txt` \| content \| MEDIUM \|/);
   } finally {
     rmSync(dirname(repo), { recursive: true, force: true });

@@ -31,6 +31,10 @@ inputs:
     description: Write the BranchGuard report to the GitHub Actions step summary.
     required: false
     default: "true"
+  summary-title:
+    description: Heading used for the GitHub Actions step summary.
+    required: false
+    default: BranchGuard CI Summary
   comment:
     description: Create or update a pull request comment with the BranchGuard report.
     required: false

@@ -9,6 +9,7 @@ Added:
 - GitHub Action outputs for `comment-written` and `comment-url`.
 - Directory risk summary in check JSON, text, and Markdown reports.
 - Recent-contributor hints for conflict files and directory summaries.
+- Productized GitHub Actions step summary with result table and recommended next step.
 
 ## 0.2.0
 
