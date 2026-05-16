@@ -143,7 +143,7 @@ permissions:
   pull-requests: read
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
     with:
       fetch-depth: 0
 
@@ -202,7 +202,7 @@ HTML artifact usage:
     output: branchguard-report.html
     fail-on-risk: high
 
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@v7
   if: always()
   with:
     name: branchguard-report
