@@ -24,8 +24,17 @@ function Run-Npm {
 function Test-PackagePublished {
   param([string]$PackageName, [string]$Version)
 
-  & npm.cmd view "$PackageName@$Version" version --registry https://registry.npmjs.org/ --cache .npm-cache *> $null
-  return $LASTEXITCODE -eq 0
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+
+  try {
+    & npm.cmd view "$PackageName@$Version" version --registry https://registry.npmjs.org/ --cache .npm-cache 1>$null 2>$null
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  return $exitCode -eq 0
 }
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -75,6 +84,7 @@ registry=https://registry.npmjs.org/
   if (Test-PackagePublished -PackageName $packageName -Version $version) {
     Write-Host "$packageName@$version already exists on npm; skipping publish." -ForegroundColor Yellow
   } else {
+    Write-Host "$packageName@$version is not on npm yet; publishing now." -ForegroundColor Yellow
     Run-Npm @("publish", "--tag", "beta", "--access", "public", "--cache", ".npm-cache", "--userconfig", $tempNpmrc)
     Write-Host "Published $packageName@$version with beta tag." -ForegroundColor Green
   }
