@@ -14,7 +14,7 @@ BranchGuard 回答一个很具体的问题：
 
 它适合 5-20 人研发小团队、外包团队、多分支并行开发团队，以及不想为了冲突预检安装重型 Git GUI 的开发者。
 
-当前版本：`v0.3.0` 已发布到 npm。实现是零运行时依赖的 Node.js CLI，默认只读，不创建 merge commit，不改分支，不写 Git index，也不上传代码。
+当前版本：`v0.3.1` 已发布到 npm。实现是零运行时依赖的 Node.js CLI，默认只读，不创建 merge commit，不改分支，不写 Git index，也不上传代码。
 
 ![BranchGuard terminal demo](./docs/assets/branchguard-demo.svg)
 
@@ -161,7 +161,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: wonderly321/branchguard-cli@v0.3.0
+      - uses: wonderly321/branchguard-cli@v0.3.1
         with:
           base: origin/main
           head: HEAD
@@ -186,7 +186,7 @@ jobs:
 可以定时生成分支冲突矩阵，并上传 HTML artifact：
 
 ```yaml
-- uses: wonderly321/branchguard-cli@v0.3.0
+- uses: wonderly321/branchguard-cli@v0.3.1
   with:
     mode: matrix
     base: origin/main
@@ -209,7 +209,7 @@ jobs:
 GitHub Action 支持通用 webhook、飞书、钉钉：
 
 ```yaml
-- uses: wonderly321/branchguard-cli@v0.3.0
+- uses: wonderly321/branchguard-cli@v0.3.1
   with:
     base: origin/main
     head: HEAD
@@ -306,6 +306,7 @@ BranchGuard 是只读工具：
 ## 文档
 
 - [产品路线图](./docs/product-roadmap.md)
+- [v0.3.1 发布说明](./docs/releases/v0.3.1.md)
 - [v0.3.0 发布说明](./docs/releases/v0.3.0.md)
 - [v0.2.0 发布说明](./docs/releases/v0.2.0.md)
 - [v0.1.0 发布说明](./docs/releases/v0.1.0.md)

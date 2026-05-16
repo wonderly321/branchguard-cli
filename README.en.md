@@ -12,7 +12,7 @@ It answers one practical question before you merge:
 
 > Will this branch conflict with my base branch, and where?
 
-Current status: v0.3.0 is published on npm. The implementation is a zero-dependency Node.js CLI and is read-only by default. It does not create merge commits, change branches, write to the Git index, or upload code.
+Current status: v0.3.1 is published on npm. The implementation is a zero-dependency Node.js CLI and is read-only by default. It does not create merge commits, change branches, write to the Git index, or upload code.
 
 ![BranchGuard terminal demo](./docs/assets/branchguard-demo.svg)
 
@@ -133,7 +133,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: wonderly321/branchguard-cli@v0.3.0
+      - uses: wonderly321/branchguard-cli@v0.3.1
         with:
           base: origin/main
           head: HEAD
@@ -150,7 +150,7 @@ When `comment: "true"` is used, the Action creates or updates one BranchGuard pu
 ## Weekly Matrix Reports
 
 ```yaml
-- uses: wonderly321/branchguard-cli@v0.3.0
+- uses: wonderly321/branchguard-cli@v0.3.1
   with:
     mode: matrix
     base: origin/main
@@ -171,7 +171,7 @@ When `comment: "true"` is used, the Action creates or updates one BranchGuard pu
 The GitHub Action supports generic, Feishu, and DingTalk webhook payloads:
 
 ```yaml
-- uses: wonderly321/branchguard-cli@v0.3.0
+- uses: wonderly321/branchguard-cli@v0.3.1
   with:
     base: origin/main
     head: HEAD
@@ -225,6 +225,7 @@ Default `.branchguard.json`:
 ## Docs
 
 - [Product roadmap](./docs/product-roadmap.md)
+- [v0.3.1 release notes](./docs/releases/v0.3.1.md)
 - [v0.3.0 release notes](./docs/releases/v0.3.0.md)
 - [Release checklist](./docs/release-checklist.md)
 - [npm publish guide](./docs/npm-publish.md)

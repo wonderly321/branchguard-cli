@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const EXIT_OK = 0;
 const EXIT_ERROR = 1;
 const EXIT_CONFLICT = 2;

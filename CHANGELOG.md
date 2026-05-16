@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.3.1
+
+Published to npm as `branchguard-cli@0.3.1`.
+
+Changed:
+
+- Localized the primary README for Chinese users.
+- Added `README.en.md` for English readers.
+
 ## 0.3.0
 
 Published to npm as `branchguard-cli@0.3.0`.
