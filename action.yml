@@ -7,6 +7,10 @@ branding:
   color: blue
 
 inputs:
+  mode:
+    description: BranchGuard command mode. Supported values are check and matrix.
+    required: false
+    default: check
   base:
     description: Base ref to merge into.
     required: false
@@ -15,6 +19,10 @@ inputs:
     description: Head ref to check.
     required: false
     default: HEAD
+  limit:
+    description: Maximum local branches to include when mode is matrix.
+    required: false
+    default: "20"
   json:
     description: Print BranchGuard JSON output. Prefer format for new workflows.
     required: false
@@ -73,6 +81,8 @@ inputs:
     default: .
 
 outputs:
+  mode:
+    description: Effective BranchGuard command mode.
   exit-code:
     description: BranchGuard exit code. 0 is clean, 1 is error, 2 is conflict.
   conflict:

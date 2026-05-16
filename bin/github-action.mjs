@@ -9,8 +9,10 @@ import { fileURLToPath } from "node:url";
 const actionRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = resolve(actionRoot, "bin", "branchguard.mjs");
 
+const mode = normalizeMode(getInput("mode"));
 const base = getInput("base") || "origin/main";
 const head = getInput("head") || "HEAD";
+const limit = getInput("limit") || "";
 const format = normalizeFormat(getInput("format"), getInput("json"));
 const failOnConflict = parseBooleanInput(getInput("fail-on-conflict"), true);
 const failurePolicy = normalizeFailurePolicy(getInput("fail-on-risk"), failOnConflict);
@@ -26,20 +28,50 @@ const webhookProvider = normalizeWebhookProvider(getInput("webhook-provider"));
 const webhookOn = normalizeWebhookPolicy(getInput("webhook-on"));
 const webhookFailOnError = parseBooleanInput(getInput("webhook-fail-on-error"), false);
 
-const args = [cliPath, "check", base, head];
-if (format === "json") {
-  args.push("--json");
-} else if (format === "markdown") {
-  args.push("--markdown");
-} else if (format === "html") {
-  args.push("--html");
+const args = buildBranchGuardArgs({ mode, base, head, limit, format, outputPath });
+
+if (args.error) {
+  console.error(args.error);
+  process.exit(1);
 }
 
-if (outputPath) {
-  args.push("--output", outputPath);
+const commandArgs = args.value;
+const displayHead = mode === "matrix" ? "" : head;
+
+function buildBranchGuardArgs(options) {
+  const commandArgs = [cliPath];
+  if (options.mode === "matrix") {
+    commandArgs.push("matrix", "--base", options.base);
+    if (options.limit) {
+      const parsedLimit = Number.parseInt(options.limit, 10);
+      if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+        return { error: `BranchGuard action received invalid limit "${options.limit}".` };
+      }
+      commandArgs.push("--limit", String(parsedLimit));
+    }
+  } else {
+    commandArgs.push("check", options.base, options.head);
+  }
+
+  appendFormatArgs(commandArgs, options.format);
+  if (options.outputPath) {
+    commandArgs.push("--output", options.outputPath);
+  }
+
+  return { value: commandArgs };
 }
 
-const result = spawnSync(process.execPath, args, {
+function appendFormatArgs(commandArgs, outputFormat) {
+  if (outputFormat === "json") {
+    commandArgs.push("--json");
+  } else if (outputFormat === "markdown") {
+    commandArgs.push("--markdown");
+  } else if (outputFormat === "html") {
+    commandArgs.push("--html");
+  }
+}
+
+const result = spawnSync(process.execPath, commandArgs, {
   cwd: workingDirectory,
   encoding: "utf8",
   env: process.env,
@@ -65,6 +97,7 @@ const riskLevel = extractRiskLevel(report, format, conflict);
 const workflowWillFail = shouldFailWorkflow({ exitCode, conflict, riskLevel, failurePolicy });
 
 writeOutput("exit-code", String(exitCode));
+writeOutput("mode", mode);
 writeOutput("conflict", String(conflict));
 writeOutput("risk-level", riskLevel);
 writeOutput("failure-policy", failurePolicy);
@@ -77,8 +110,9 @@ if (outputPath) {
 const summaryWritten = writeSummary(report, {
   enabled: writeStepSummary,
   title: summaryTitle,
+  mode,
   base,
-  head,
+  head: displayHead,
   exitCode,
   conflict,
   riskLevel,
@@ -102,8 +136,9 @@ const webhookResult = await sendWebhook(report, {
   enabled: shouldSendWebhook({ url: webhookUrl, webhookOn, conflict, riskLevel }),
   url: webhookUrl,
   provider: webhookProvider,
+  mode,
   base,
-  head,
+  head: displayHead,
   exitCode,
   conflict,
   riskLevel,
@@ -146,6 +181,15 @@ function normalizeFormat(formatInput, jsonInput) {
   }
 
   return parseBooleanInput(jsonInput, true) ? "json" : "text";
+}
+
+function normalizeMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["check", "matrix"].includes(normalized)) {
+    return normalized;
+  }
+
+  return "check";
 }
 
 function parseBooleanInput(value, fallback) {
@@ -202,6 +246,10 @@ function extractRiskLevel(report, format, conflict) {
       if (["LOW", "MEDIUM", "HIGH"].includes(payload.risk_level)) {
         return payload.risk_level;
       }
+      const matrixRisk = highestRiskLevel((payload.entries || []).map((entry) => entry.risk_level));
+      if (matrixRisk) {
+        return matrixRisk;
+      }
     } catch {
       return conflict ? "MEDIUM" : "LOW";
     }
@@ -222,7 +270,29 @@ function extractRiskLevel(report, format, conflict) {
     return htmlRisk[1].toUpperCase();
   }
 
+  const reportRisks = [...report.matchAll(/\b(LOW|MEDIUM|HIGH)\b/g)].map((match) => match[1]);
+  const highestReportRisk = highestRiskLevel(reportRisks);
+  if (highestReportRisk) {
+    return highestReportRisk;
+  }
+
   return conflict ? "MEDIUM" : "LOW";
+}
+
+function highestRiskLevel(levels) {
+  const scores = { LOW: 0, MEDIUM: 1, HIGH: 2 };
+  return levels.reduce((highest, level) => {
+    const normalized = String(level || "").toUpperCase();
+    if (!Object.hasOwn(scores, normalized)) {
+      return highest;
+    }
+
+    if (!highest || scores[normalized] > scores[highest]) {
+      return normalized;
+    }
+
+    return highest;
+  }, "");
 }
 
 function shouldFailWorkflow(options) {
@@ -292,9 +362,12 @@ function buildStepSummary(report, options) {
       ? "Check the action logs and verify both Git refs are available."
       : options.conflict
         ? options.workflowWillFail
-          ? "Resolve or rebase the branch before merging. Start with the highest-risk directory in the detailed report."
+          ? options.mode === "matrix"
+            ? "Review the highest-risk branches in the detailed report before the next merge window."
+            : "Resolve or rebase the branch before merging. Start with the highest-risk directory in the detailed report."
           : "Review the report before merging. This workflow is not blocking because of the configured failure policy."
         : "No merge-conflict action needed.";
+  const headRow = options.head ? [`| Head | ${inlineCode(options.head)} |`] : [];
 
   return [
     `# ${options.title}`,
@@ -302,8 +375,9 @@ function buildStepSummary(report, options) {
     "| Field | Value |",
     "| --- | --- |",
     `| Result | ${escapeMarkdownCell(resultLabel)} |`,
+    `| Mode | ${inlineCode(options.mode)} |`,
     `| Base | ${inlineCode(options.base)} |`,
-    `| Head | ${inlineCode(options.head)} |`,
+    ...headRow,
     `| Risk | ${escapeMarkdownCell(options.riskLevel)} |`,
     `| Exit code | ${inlineCode(String(options.exitCode))} |`,
     `| Failure policy | ${inlineCode(options.failurePolicy)} |`,
@@ -444,8 +518,9 @@ function buildWebhookPayload(report, options) {
     : "BranchGuard check passed";
   const text = [
     title,
+    `Mode: ${options.mode}`,
     `Base: ${options.base}`,
-    `Head: ${options.head}`,
+    ...(options.head ? [`Head: ${options.head}`] : []),
     `Risk: ${options.riskLevel}`,
     `Exit code: ${options.exitCode}`,
     `Workflow: ${options.workflowWillFail ? "failing" : "passing"}`,
@@ -474,8 +549,9 @@ function buildWebhookPayload(report, options) {
 
   return {
     title,
+    mode: options.mode,
     base: options.base,
-    head: options.head,
+    ...(options.head ? { head: options.head } : {}),
     exit_code: options.exitCode,
     conflict: options.conflict,
     risk_level: options.riskLevel,

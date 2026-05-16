@@ -315,6 +315,33 @@ test("github action wrapper can fail only on high risk conflicts", () => {
   }
 });
 
+test("github action wrapper can run matrix reports", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  try {
+    const result = runAction(repo, {
+      GITHUB_OUTPUT: outputPath,
+      INPUT_MODE: "matrix",
+      INPUT_BASE: "main",
+      INPUT_LIMIT: "5",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_RISK: "high",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /# BranchGuard Matrix/);
+    assert.match(result.stdout, /\| `feature-conflict` \| 1 \| MEDIUM \|/);
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /mode<<branchguard_mode_/);
+    assert.match(output, /\nmatrix\nbranchguard_mode_/);
+    assert.match(output, /risk-level<<branchguard_risk-level_/);
+    assert.match(output, /\nMEDIUM\nbranchguard_risk-level_/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("github action wrapper writes pull request comment in mock mode", () => {
   const repo = createFixtureRepo();
   const outputPath = join(dirname(repo), "github-output.txt");

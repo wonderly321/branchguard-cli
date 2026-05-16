@@ -1,0 +1,38 @@
+name: BranchGuard Weekly Report
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  weekly-conflict-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build weekly conflict report
+        uses: wonderly321/branchguard-cli@main
+        with:
+          mode: matrix
+          base: origin/main
+          limit: 20
+          format: html
+          output: branchguard-weekly-report.html
+          fail-on-risk: high
+          webhook-url: ${{ secrets.BRANCHGUARD_WEBHOOK_URL }}
+          webhook-provider: feishu
+          webhook-on: high
+
+      - name: Upload weekly report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: branchguard-weekly-report
+          path: branchguard-weekly-report.html

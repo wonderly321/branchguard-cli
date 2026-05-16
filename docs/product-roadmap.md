@@ -48,7 +48,7 @@ Planned:
 - Configurable GitHub Action failure policy by risk level. (done on `main`; release later)
 - HTML report. (done on `main`; release later)
 - Feishu/DingTalk webhook output. (done on `main`; release later)
-- Weekly conflict report.
+- Weekly conflict report. (done on `main`; release later)
 
 ## v1.0: Commercial Shape
 

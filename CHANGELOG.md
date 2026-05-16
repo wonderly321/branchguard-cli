@@ -14,6 +14,7 @@ Added:
 - Self-contained HTML reports for `check` and `matrix`.
 - GitHub Action `output` input for writing report files.
 - GitHub Action webhook notifications for generic, Feishu, and DingTalk payloads.
+- GitHub Action `mode: matrix` for scheduled branch conflict reports.
 
 ## 0.2.0
 

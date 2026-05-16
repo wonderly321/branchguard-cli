@@ -128,6 +128,8 @@ Reports also include lightweight recent-contributor hints from `git log` on the 
 
 See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a GitHub pull request conflict check example.
 
+See [docs/examples/github-weekly-report.yml](./docs/examples/github-weekly-report.yml) for a scheduled weekly branch conflict report.
+
 See [docs/examples/gitlab-ci.yml](./docs/examples/gitlab-ci.yml) for a GitLab merge request conflict check example.
 
 Direct GitHub Action usage:
@@ -203,6 +205,19 @@ HTML artifact usage:
   with:
     name: branchguard-report
     path: branchguard-report.html
+```
+
+Weekly matrix report usage:
+
+```yaml
+- uses: wonderly321/branchguard-cli@main
+  with:
+    mode: matrix
+    base: origin/main
+    limit: 20
+    format: html
+    output: branchguard-weekly-report.html
+    fail-on-risk: high
 ```
 
 ## Risk Levels
