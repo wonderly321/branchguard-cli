@@ -60,6 +60,7 @@ test("detects clean and conflicting branch checks", () => {
     assert.equal(payload.has_conflict, true);
     assert.equal(payload.conflict_count, 1);
     assert.equal(payload.conflict_files[0].path, "app.txt");
+    assert.ok(payload.conflict_files[0].recent_contributors.length > 0);
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -176,12 +177,17 @@ test("summarizes conflicts by directory", () => {
         ["src/auth", 1, "MEDIUM"],
       ],
     );
+    const rootSummary = payload.directory_summary.find((entry) => entry.path === ".");
+    assert.deepEqual(
+      rootSummary.recent_contributors.map((contributor) => contributor.name).sort(),
+      ["BranchGuard Test", "Feature Owner", "Main Owner"],
+    );
 
     const markdown = runCli(["check", "main", "feature-conflict", "--markdown"], repo);
     assert.equal(markdown.status, 2);
     assert.match(markdown.stdout, /## Directory Summary/);
-    assert.match(markdown.stdout, /\| `\(root\)` \| 1 \| HIGH \|/);
-    assert.match(markdown.stdout, /\| `src\/auth` \| 1 \| MEDIUM \|/);
+    assert.match(markdown.stdout, /\| `\(root\)` \| 1 \| HIGH \| BranchGuard Test, Feature Owner, Main Owner \|/);
+    assert.match(markdown.stdout, /\| `src\/auth` \| 1 \| MEDIUM \| BranchGuard Test, Feature Owner, Main Owner \|/);
   } finally {
     rmSync(dirname(repo), { recursive: true, force: true });
   }
@@ -314,18 +320,24 @@ function createFixtureRepo(options = {}) {
   git(repo, ["commit", "-m", "initial"]);
 
   git(repo, ["checkout", "-b", "feature-conflict"]);
+  git(repo, ["config", "user.email", "feature@example.test"]);
+  git(repo, ["config", "user.name", "Feature Owner"]);
   for (const conflictFile of conflictFiles) {
     writeFileSync(join(repo, conflictFile), "feature change\n", "utf8");
   }
   git(repo, ["commit", "-am", "feature change"]);
 
   git(repo, ["checkout", "main"]);
+  git(repo, ["config", "user.email", "main@example.test"]);
+  git(repo, ["config", "user.name", "Main Owner"]);
   for (const conflictFile of conflictFiles) {
     writeFileSync(join(repo, conflictFile), "main change\n", "utf8");
   }
   git(repo, ["commit", "-am", "main change"]);
 
   git(repo, ["checkout", "-b", "feature-clean"]);
+  git(repo, ["config", "user.email", "branchguard@example.test"]);
+  git(repo, ["config", "user.name", "BranchGuard Test"]);
   writeFileSync(join(repo, "other.txt"), "new file\n", "utf8");
   git(repo, ["add", "other.txt"]);
   git(repo, ["commit", "-m", "clean feature"]);

@@ -42,7 +42,7 @@ Goal: Make it valuable for small teams instead of only individuals.
 Planned:
 
 - Report file output for CI artifacts. (done on `main`; release later)
-- Branch owner detection via `git blame`.
+- Recent-contributor hints via `git log`. (done on `main`; release later)
 - Risk summary grouped by directory. (done on `main`; release later)
 - Weekly conflict report.
 - Feishu/DingTalk webhook output.

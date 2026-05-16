@@ -8,6 +8,7 @@ Added:
 - GitHub Action pull request comment creation/update via `comment: "true"`.
 - GitHub Action outputs for `comment-written` and `comment-url`.
 - Directory risk summary in check JSON, text, and Markdown reports.
+- Recent-contributor hints for conflict files and directory summaries.
 
 ## 0.2.0
 

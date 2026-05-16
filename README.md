@@ -116,6 +116,8 @@ branchguard check main feature/login --markdown --output branchguard-report.md
 
 Markdown and JSON reports include a directory summary so teams can quickly see which module or root-level file is creating the most risk.
 
+Reports also include lightweight recent-contributor hints from `git log` on the base and head refs. These are not strict code ownership rules; they are quick routing hints for who may know the conflicting files best.
+
 ## CI
 
 See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a GitHub pull request conflict check example.

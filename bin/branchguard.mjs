@@ -16,6 +16,8 @@ const RISK_SCORE = {
   MEDIUM: 1,
   HIGH: 2,
 };
+const RECENT_CONTRIBUTOR_LIMIT = 3;
+const RECENT_COMMIT_SCAN_LIMIT = 12;
 
 const HIGH_RISK_PATTERNS = [
   /^package-lock\.json$/,
@@ -697,22 +699,23 @@ function buildCheckResult(base, head, hasConflict, paths, config) {
         risk: highRisk ? "HIGH" : "MEDIUM",
       };
     });
+  const conflictFilesWithHints = addOwnershipHints(base, head, conflictFiles);
 
-  const riskLevel = calculateRisk(conflictFiles);
-  const hasActiveConflict = hasConflict && conflictFiles.length > 0;
-  const directorySummary = summarizeDirectories(conflictFiles);
+  const riskLevel = calculateRisk(conflictFilesWithHints);
+  const hasActiveConflict = hasConflict && conflictFilesWithHints.length > 0;
+  const directorySummary = summarizeDirectories(conflictFilesWithHints);
   return {
     base,
     head,
     has_conflict: hasActiveConflict,
     risk_level: riskLevel,
-    conflict_count: conflictFiles.length,
-    conflict_files: conflictFiles,
+    conflict_count: conflictFilesWithHints.length,
+    conflict_files: conflictFilesWithHints,
     directory_summary: directorySummary,
     ignored_conflict_count: ignoredConflictFiles.length,
     ignored_conflict_files: ignoredConflictFiles,
     summary: hasActiveConflict
-      ? `${conflictFiles.length} conflicting file${conflictFiles.length === 1 ? "" : "s"} detected`
+      ? `${conflictFilesWithHints.length} conflicting file${conflictFilesWithHints.length === 1 ? "" : "s"} detected`
       : ignoredConflictFiles.length > 0
         ? `no actionable conflicts detected; ${ignoredConflictFiles.length} ignored conflict${ignoredConflictFiles.length === 1 ? "" : "s"} skipped`
       : "no merge conflicts detected",
@@ -742,12 +745,16 @@ function summarizeDirectories(conflictFiles) {
       conflict_count: 0,
       risk: "LOW",
       files: [],
+      contributors: new Map(),
     };
 
     group.conflict_count += 1;
     group.files.push(file.path);
     if (RISK_SCORE[file.risk] > RISK_SCORE[group.risk]) {
       group.risk = file.risk;
+    }
+    for (const contributor of file.recent_contributors || []) {
+      incrementContributor(group.contributors, contributor, contributor.commits);
     }
     groups.set(directory, group);
   }
@@ -757,6 +764,8 @@ function summarizeDirectories(conflictFiles) {
       group.risk = "HIGH";
     }
     group.files.sort();
+    group.recent_contributors = sortContributorCounts(group.contributors).slice(0, RECENT_CONTRIBUTOR_LIMIT);
+    delete group.contributors;
   }
 
   return [...groups.values()].sort((left, right) => {
@@ -780,6 +789,69 @@ function getDirectoryPath(path) {
     return ".";
   }
   return normalized.slice(0, slashIndex) || ".";
+}
+
+function addOwnershipHints(base, head, conflictFiles) {
+  return conflictFiles.map((file) => ({
+    ...file,
+    recent_contributors: getRecentContributors(base, head, file.path),
+  }));
+}
+
+function getRecentContributors(base, head, path) {
+  const counts = new Map();
+  const seenCommits = new Set();
+
+  for (const ref of [base, head]) {
+    const log = runGit([
+      "log",
+      `--max-count=${RECENT_COMMIT_SCAN_LIMIT}`,
+      "--format=%H%x00%aN%x00%aE",
+      ref,
+      "--",
+      path,
+    ]);
+
+    if (log.status !== 0 || !log.stdout.trim()) {
+      continue;
+    }
+
+    for (const line of log.stdout.split(/\r?\n/)) {
+      const [commit, name, email] = line.split("\0");
+      if (!commit || seenCommits.has(commit)) {
+        continue;
+      }
+
+      seenCommits.add(commit);
+      incrementContributor(counts, { name, email }, 1);
+    }
+  }
+
+  return sortContributorCounts(counts).slice(0, RECENT_CONTRIBUTOR_LIMIT);
+}
+
+function incrementContributor(counts, contributor, commits) {
+  const name = contributor.name || "Unknown";
+  const email = contributor.email || "";
+  const key = `${name}\0${email}`;
+  const current = counts.get(key) || { name, email, commits: 0 };
+  current.commits += commits;
+  counts.set(key, current);
+}
+
+function sortContributorCounts(counts) {
+  return [...counts.values()].sort((left, right) => {
+    if (right.commits !== left.commits) {
+      return right.commits - left.commits;
+    }
+
+    const nameCompare = left.name.localeCompare(right.name);
+    if (nameCompare !== 0) {
+      return nameCompare;
+    }
+
+    return left.email.localeCompare(right.email);
+  });
 }
 
 function isHighRiskPath(path, config) {
@@ -953,7 +1025,7 @@ function renderCheckText(result) {
     lines.push("Directory Summary:");
     for (const directory of result.directory_summary) {
       lines.push(
-        `- ${formatDirectoryPath(directory.path)}: ${directory.conflict_count} file${directory.conflict_count === 1 ? "" : "s"} (${directory.risk})`,
+        `- ${formatDirectoryPath(directory.path)}: ${directory.conflict_count} file${directory.conflict_count === 1 ? "" : "s"} (${directory.risk}); recent: ${formatContributorsText(directory.recent_contributors)}`,
       );
     }
     lines.push("");
@@ -995,11 +1067,11 @@ function renderCheckMarkdown(result) {
     lines.push("");
     lines.push("## Directory Summary");
     lines.push("");
-    lines.push("| Directory | Conflicts | Risk |");
-    lines.push("| --- | ---: | --- |");
+    lines.push("| Directory | Conflicts | Risk | Recent contributors |");
+    lines.push("| --- | ---: | --- | --- |");
     for (const directory of result.directory_summary) {
       lines.push(
-        `| ${inlineCode(formatDirectoryPath(directory.path))} | ${directory.conflict_count} | ${escapeMarkdownCell(directory.risk)} |`,
+        `| ${inlineCode(formatDirectoryPath(directory.path))} | ${directory.conflict_count} | ${escapeMarkdownCell(directory.risk)} | ${escapeMarkdownCell(formatContributorsText(directory.recent_contributors))} |`,
       );
     }
     lines.push("");
@@ -1147,6 +1219,16 @@ function escapeMarkdownCell(value) {
 
 function formatDirectoryPath(path) {
   return path === "." ? "(root)" : path;
+}
+
+function formatContributorsText(contributors) {
+  if (!contributors || contributors.length === 0) {
+    return "n/a";
+  }
+
+  return contributors
+    .map((contributor) => `${contributor.name}${contributor.commits > 1 ? ` (${contributor.commits})` : ""}`)
+    .join(", ");
 }
 
 function emitReport(report, outputPath) {
