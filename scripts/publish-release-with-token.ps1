@@ -37,6 +37,22 @@ function Test-PackagePublished {
   return $exitCode -eq 0
 }
 
+function Wait-PackagePublished {
+  param([string]$PackageName, [string]$Version)
+
+  for ($attempt = 1; $attempt -le 12; $attempt += 1) {
+    if (Test-PackagePublished -PackageName $PackageName -Version $Version) {
+      Write-Host "$PackageName@$Version is visible on npm." -ForegroundColor Green
+      return
+    }
+
+    Write-Host "Waiting for npm registry to expose $PackageName@$Version ($attempt/12)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
+  }
+
+  throw "$PackageName@$Version was published, but npm registry did not expose it within 120 seconds."
+}
+
 function Get-MatchingTokenMetadata {
   param([string]$Token, [string]$UserConfig)
 
@@ -143,6 +159,7 @@ registry=https://registry.npmjs.org/
     Write-Host "Published $packageName@$version with beta tag." -ForegroundColor Green
   }
 
+  Wait-PackagePublished -PackageName $packageName -Version $version
   Run-Npm @("install", "--prefix", $smokeDir, "$packageName@$version", "--registry", "https://registry.npmjs.org/", "--cache", ".npm-cache")
 
   $branchguardCmd = Join-Path $smokeDir "node_modules\.bin\branchguard.cmd"
