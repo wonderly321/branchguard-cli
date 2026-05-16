@@ -50,6 +50,20 @@ Planned:
 - Feishu/DingTalk webhook output. (done on `main`; release as `v0.3.0`)
 - Weekly conflict report. (done on `main`; release as `v0.3.0`)
 
+## v0.4: Adoption Validation
+
+Goal: Validate that real small teams will install BranchGuard and use it in daily PR workflows.
+
+Planned:
+
+- Chinese marketing launch pack. (done on `main`)
+- Public feedback tracking issue. (done: https://github.com/wonderly321/branchguard-cli/issues/3)
+- V2EX launch post.
+- Juejin technical article.
+- Direct outreach to 10 small-team developers or Tech Leads.
+- Help 3 real repositories finish GitHub Action integration.
+- Pause major new product features until early-user feedback identifies the next bottleneck.
+
 ## v1.0: Commercial Shape
 
 Goal: Paid team edition.
