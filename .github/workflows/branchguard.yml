@@ -1,0 +1,65 @@
+name: BranchGuard
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * 1"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  pull-request-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pull request head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check pull request conflicts
+        uses: ./
+        with:
+          base: origin/${{ github.event.pull_request.base.ref }}
+          head: HEAD
+          format: markdown
+          fail-on-risk: high
+          summary-title: BranchGuard Pull Request Check
+          comment: "true"
+          github-token: ${{ github.token }}
+
+  weekly-matrix-report:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build weekly conflict report
+        uses: ./
+        with:
+          mode: matrix
+          base: origin/main
+          limit: 20
+          format: html
+          output: branchguard-weekly-report.html
+          fail-on-risk: high
+          webhook-url: ${{ secrets.BRANCHGUARD_WEBHOOK_URL }}
+          webhook-provider: feishu
+          webhook-on: high
+
+      - name: Upload weekly report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: branchguard-weekly-report
+          path: branchguard-weekly-report.html
