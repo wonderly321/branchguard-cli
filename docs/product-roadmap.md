@@ -26,7 +26,7 @@ Planned:
 - GitHub Action wrapper. (done on `main`; release as `v0.2.0`)
 - GitLab CI example. (done on `main`; release as `v0.2.0`)
 - Markdown report output. (done on `main`; release as `v0.2.0`)
-- PR comment creation/update. (done on `main`; release later)
+- PR comment creation/update. (done on `main`; release as `v0.3.0`)
 - Better modern `git merge-tree --write-tree` parsing on newer Git versions. (done on `main`; release as `v0.2.0`)
 
 Tracking issues:
@@ -41,14 +41,14 @@ Goal: Make it valuable for small teams instead of only individuals.
 
 Planned:
 
-- Report file output for CI artifacts. (done on `main`; release later)
-- Recent-contributor hints via `git log`. (done on `main`; release later)
-- Risk summary grouped by directory. (done on `main`; release later)
-- Productized GitHub Actions step summary. (done on `main`; release later)
-- Configurable GitHub Action failure policy by risk level. (done on `main`; release later)
-- HTML report. (done on `main`; release later)
-- Feishu/DingTalk webhook output. (done on `main`; release later)
-- Weekly conflict report. (done on `main`; release later)
+- Report file output for CI artifacts. (done on `main`; release as `v0.3.0`)
+- Recent-contributor hints via `git log`. (done on `main`; release as `v0.3.0`)
+- Risk summary grouped by directory. (done on `main`; release as `v0.3.0`)
+- Productized GitHub Actions step summary. (done on `main`; release as `v0.3.0`)
+- Configurable GitHub Action failure policy by risk level. (done on `main`; release as `v0.3.0`)
+- HTML report. (done on `main`; release as `v0.3.0`)
+- Feishu/DingTalk webhook output. (done on `main`; release as `v0.3.0`)
+- Weekly conflict report. (done on `main`; release as `v0.3.0`)
 
 ## v1.0: Commercial Shape
 

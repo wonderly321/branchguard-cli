@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.3.0
+
+Prepared for npm release as `branchguard-cli@0.3.0`.
+
 Added:
 
 - `--output <file>` for `check` and `matrix` reports.

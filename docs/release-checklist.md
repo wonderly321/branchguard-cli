@@ -2,6 +2,23 @@
 
 This checklist turns the current CLI into a release-ready package.
 
+## Required Before v0.3
+
+- [x] Add PR comment creation/update.
+- [x] Add report file output for CI artifacts.
+- [x] Add directory risk summaries.
+- [x] Add recent-contributor hints.
+- [x] Add risk-based GitHub Action failure policy.
+- [x] Add HTML reports.
+- [x] Add Action report file output.
+- [x] Add Feishu/DingTalk webhook output.
+- [x] Add scheduled matrix report support.
+- [x] Run `npm run check`.
+- [x] Run `npm test`.
+- [x] Run `npm pack --dry-run --cache .npm-cache`.
+- [ ] Publish `branchguard-cli@0.3.0`.
+- [ ] Create `v0.3.0` git tag after npm publish succeeds.
+
 ## Required Before v0.2
 
 - [x] Add GitHub Action wrapper.
