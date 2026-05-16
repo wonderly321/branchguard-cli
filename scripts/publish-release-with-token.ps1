@@ -37,6 +37,44 @@ function Test-PackagePublished {
   return $exitCode -eq 0
 }
 
+function Get-MatchingTokenMetadata {
+  param([string]$Token, [string]$UserConfig)
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+
+  try {
+    $output = & npm.cmd token list --json --registry https://registry.npmjs.org/ --userconfig $UserConfig 2>$null
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($exitCode -ne 0 -or -not $output) {
+    return $null
+  }
+
+  try {
+    $tokens = $output | ConvertFrom-Json
+  } catch {
+    return $null
+  }
+
+  foreach ($item in @($tokens)) {
+    if (-not $item.token -or $item.token -notmatch "^(.*)\.\.\.(.*)$") {
+      continue
+    }
+
+    $prefix = $Matches[1]
+    $suffix = $Matches[2]
+    if ($Token.StartsWith($prefix) -and $Token.EndsWith($suffix)) {
+      return $item
+    }
+  }
+
+  return $null
+}
+
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $projectRoot
 
@@ -79,6 +117,22 @@ try {
 registry=https://registry.npmjs.org/
 //registry.npmjs.org/:_authToken=$token
 "@
+
+  $tokenMetadata = Get-MatchingTokenMetadata -Token $token -UserConfig $tempNpmrc
+  if ($null -ne $tokenMetadata) {
+    Write-Host "Token metadata:" -ForegroundColor Cyan
+    Write-Host "- name: $($tokenMetadata.name)"
+    Write-Host "- bypass_2fa: $($tokenMetadata.bypass_2fa)"
+    Write-Host "- permissions: $($tokenMetadata.permissions | ConvertTo-Json -Compress)"
+    Write-Host "- scopes: $($tokenMetadata.scopes | ConvertTo-Json -Compress)"
+
+    if ($tokenMetadata.bypass_2fa -ne $true) {
+      throw "This token has bypass_2fa=false. Create a new Granular Access Token with Bypass 2FA enabled, all packages, and read/write package permission."
+    }
+  } else {
+    Write-Host "Could not read token metadata; continuing to publish attempt." -ForegroundColor Yellow
+  }
+
   $token = $null
 
   if (Test-PackagePublished -PackageName $packageName -Version $version) {
