@@ -160,6 +160,33 @@ test("prints markdown reports for check and matrix", () => {
   }
 });
 
+test("summarizes conflicts by directory", () => {
+  const repo = createFixtureRepo({
+    conflictFiles: ["src/app.js", "src/auth/login.js", "package-lock.json"],
+  });
+  try {
+    const result = runCli(["check", "main", "feature-conflict", "--json"], repo);
+    assert.equal(result.status, 2);
+    const payload = JSON.parse(result.stdout);
+    assert.deepEqual(
+      payload.directory_summary.map((entry) => [entry.path, entry.conflict_count, entry.risk]),
+      [
+        [".", 1, "HIGH"],
+        ["src", 1, "MEDIUM"],
+        ["src/auth", 1, "MEDIUM"],
+      ],
+    );
+
+    const markdown = runCli(["check", "main", "feature-conflict", "--markdown"], repo);
+    assert.equal(markdown.status, 2);
+    assert.match(markdown.stdout, /## Directory Summary/);
+    assert.match(markdown.stdout, /\| `\(root\)` \| 1 \| HIGH \|/);
+    assert.match(markdown.stdout, /\| `src\/auth` \| 1 \| MEDIUM \|/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("writes check and matrix reports to output files", () => {
   const repo = createFixtureRepo();
   const reportPath = join(dirname(repo), "reports", "branchguard-report.md");
@@ -268,7 +295,7 @@ test("github action wrapper writes markdown step summary", () => {
 });
 
 function createFixtureRepo(options = {}) {
-  const conflictFile = options.conflictFile || "app.txt";
+  const conflictFiles = options.conflictFiles || [options.conflictFile || "app.txt"];
   mkdirSync(tempRoot, { recursive: true });
   const parent = mkdtempSync(join(tempRoot, "branchguard-repo-parent-"));
   const repo = join(parent, "repo");
@@ -279,17 +306,23 @@ function createFixtureRepo(options = {}) {
   git(repo, ["config", "user.email", "branchguard@example.test"]);
   git(repo, ["config", "user.name", "BranchGuard Test"]);
 
-  mkdirSync(dirname(join(repo, conflictFile)), { recursive: true });
-  writeFileSync(join(repo, conflictFile), "hello\n", "utf8");
-  git(repo, ["add", conflictFile]);
+  for (const conflictFile of conflictFiles) {
+    mkdirSync(dirname(join(repo, conflictFile)), { recursive: true });
+    writeFileSync(join(repo, conflictFile), "hello\n", "utf8");
+  }
+  git(repo, ["add", ...conflictFiles]);
   git(repo, ["commit", "-m", "initial"]);
 
   git(repo, ["checkout", "-b", "feature-conflict"]);
-  writeFileSync(join(repo, conflictFile), "feature change\n", "utf8");
+  for (const conflictFile of conflictFiles) {
+    writeFileSync(join(repo, conflictFile), "feature change\n", "utf8");
+  }
   git(repo, ["commit", "-am", "feature change"]);
 
   git(repo, ["checkout", "main"]);
-  writeFileSync(join(repo, conflictFile), "main change\n", "utf8");
+  for (const conflictFile of conflictFiles) {
+    writeFileSync(join(repo, conflictFile), "main change\n", "utf8");
+  }
   git(repo, ["commit", "-am", "main change"]);
 
   git(repo, ["checkout", "-b", "feature-clean"]);

@@ -11,6 +11,11 @@ const EXIT_OK = 0;
 const EXIT_ERROR = 1;
 const EXIT_CONFLICT = 2;
 const CONFIG_FILE = ".branchguard.json";
+const RISK_SCORE = {
+  LOW: 0,
+  MEDIUM: 1,
+  HIGH: 2,
+};
 
 const HIGH_RISK_PATTERNS = [
   /^package-lock\.json$/,
@@ -695,6 +700,7 @@ function buildCheckResult(base, head, hasConflict, paths, config) {
 
   const riskLevel = calculateRisk(conflictFiles);
   const hasActiveConflict = hasConflict && conflictFiles.length > 0;
+  const directorySummary = summarizeDirectories(conflictFiles);
   return {
     base,
     head,
@@ -702,6 +708,7 @@ function buildCheckResult(base, head, hasConflict, paths, config) {
     risk_level: riskLevel,
     conflict_count: conflictFiles.length,
     conflict_files: conflictFiles,
+    directory_summary: directorySummary,
     ignored_conflict_count: ignoredConflictFiles.length,
     ignored_conflict_files: ignoredConflictFiles,
     summary: hasActiveConflict
@@ -723,6 +730,56 @@ function calculateRisk(conflictFiles) {
     return "HIGH";
   }
   return "MEDIUM";
+}
+
+function summarizeDirectories(conflictFiles) {
+  const groups = new Map();
+
+  for (const file of conflictFiles) {
+    const directory = getDirectoryPath(file.path);
+    const group = groups.get(directory) || {
+      path: directory,
+      conflict_count: 0,
+      risk: "LOW",
+      files: [],
+    };
+
+    group.conflict_count += 1;
+    group.files.push(file.path);
+    if (RISK_SCORE[file.risk] > RISK_SCORE[group.risk]) {
+      group.risk = file.risk;
+    }
+    groups.set(directory, group);
+  }
+
+  for (const group of groups.values()) {
+    if (group.risk !== "HIGH" && group.conflict_count >= 3) {
+      group.risk = "HIGH";
+    }
+    group.files.sort();
+  }
+
+  return [...groups.values()].sort((left, right) => {
+    const riskDiff = RISK_SCORE[right.risk] - RISK_SCORE[left.risk];
+    if (riskDiff !== 0) {
+      return riskDiff;
+    }
+
+    if (right.conflict_count !== left.conflict_count) {
+      return right.conflict_count - left.conflict_count;
+    }
+
+    return left.path.localeCompare(right.path);
+  });
+}
+
+function getDirectoryPath(path) {
+  const normalized = normalizePath(path);
+  const slashIndex = normalized.lastIndexOf("/");
+  if (slashIndex < 0) {
+    return ".";
+  }
+  return normalized.slice(0, slashIndex) || ".";
 }
 
 function isHighRiskPath(path, config) {
@@ -893,6 +950,14 @@ function renderCheckText(result) {
 
   if (result.conflict_files.length > 0) {
     lines.push("");
+    lines.push("Directory Summary:");
+    for (const directory of result.directory_summary) {
+      lines.push(
+        `- ${formatDirectoryPath(directory.path)}: ${directory.conflict_count} file${directory.conflict_count === 1 ? "" : "s"} (${directory.risk})`,
+      );
+    }
+    lines.push("");
+    lines.push("Conflicting Files:");
     for (const file of result.conflict_files) {
       lines.push(`${file.path}${file.risk === "HIGH" ? "  [HIGH]" : ""}`);
     }
@@ -927,6 +992,18 @@ function renderCheckMarkdown(result) {
   ];
 
   if (result.conflict_files.length > 0) {
+    lines.push("");
+    lines.push("## Directory Summary");
+    lines.push("");
+    lines.push("| Directory | Conflicts | Risk |");
+    lines.push("| --- | ---: | --- |");
+    for (const directory of result.directory_summary) {
+      lines.push(
+        `| ${inlineCode(formatDirectoryPath(directory.path))} | ${directory.conflict_count} | ${escapeMarkdownCell(directory.risk)} |`,
+      );
+    }
+    lines.push("");
+    lines.push("## Conflicting Files");
     lines.push("");
     lines.push("| File | Type | Risk |");
     lines.push("| --- | --- | --- |");
@@ -1066,6 +1143,10 @@ function inlineCode(value) {
 
 function escapeMarkdownCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function formatDirectoryPath(path) {
+  return path === "." ? "(root)" : path;
 }
 
 function emitReport(report, outputPath) {

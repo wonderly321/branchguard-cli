@@ -43,7 +43,7 @@ Planned:
 
 - Report file output for CI artifacts. (done on `main`; release later)
 - Branch owner detection via `git blame`.
-- Risk summary grouped by directory.
+- Risk summary grouped by directory. (done on `main`; release later)
 - Weekly conflict report.
 - Feishu/DingTalk webhook output.
 - HTML report.

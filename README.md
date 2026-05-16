@@ -114,6 +114,8 @@ branchguard check main feature/login --markdown --output branchguard-report.md
 
 `--output <file>` writes the same report that is printed to stdout. Parent directories are created automatically.
 
+Markdown and JSON reports include a directory summary so teams can quickly see which module or root-level file is creating the most risk.
+
 ## CI
 
 See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a GitHub pull request conflict check example.
@@ -163,6 +165,8 @@ When `comment: "true"` is used on `main`, the Action creates or updates one Bran
 - `HIGH`: three or more conflicts, or conflicts in high-risk files.
 
 High-risk files currently include lock files, migrations, schema files, OpenAPI files, proto files, and GraphQL files.
+
+Directory risk is grouped from conflicting files. A directory is marked `HIGH` when it contains a high-risk conflict or three or more conflicting files.
 
 ## Configuration
 
