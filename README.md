@@ -4,181 +4,212 @@
 [![npm beta](https://img.shields.io/npm/v/branchguard-cli/beta.svg?label=beta)](https://www.npmjs.com/package/branchguard-cli)
 [![license](https://img.shields.io/npm/l/branchguard-cli.svg)](./LICENSE)
 
-BranchGuard is a lightweight Git merge conflict pre-check CLI.
+> 合并前提前发现 Git 冲突，给小团队用的轻量 CLI / GitHub Action。
 
-npm package: `branchguard-cli`
+[English README](./README.en.md)
 
-Repository: [wonderly321/branchguard-cli](https://github.com/wonderly321/branchguard-cli)
+BranchGuard 回答一个很具体的问题：
 
-It answers one practical question before you merge:
+> 这个分支合到 `main` 之前，会不会冲突？冲突在哪里？风险高不高？该找谁协调？
 
-> Will this branch conflict with my base branch, and where?
+它适合 5-20 人研发小团队、外包团队、多分支并行开发团队，以及不想为了冲突预检安装重型 Git GUI 的开发者。
 
-Current status: v0.3.0 is published on npm. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
+当前版本：`v0.3.0` 已发布到 npm。实现是零运行时依赖的 Node.js CLI，默认只读，不创建 merge commit，不改分支，不写 Git index，也不上传代码。
 
 ![BranchGuard terminal demo](./docs/assets/branchguard-demo.svg)
 
-## Usage
+## 快速开始
 
-Install from npm:
+全局安装：
 
 ```bash
 npm install --global branchguard-cli
 branchguard doctor
 ```
 
-Install from GitHub:
+在 Git 仓库里运行：
+
+```bash
+branchguard init
+branchguard check main feature/login
+branchguard check main feature/login --markdown
+branchguard check main feature/login --html --output branchguard-report.html
+branchguard matrix --base main
+```
+
+也可以直接从 GitHub 安装：
 
 ```bash
 npm install --global github:wonderly321/branchguard-cli
 branchguard doctor
 ```
 
-Run from inside a Git repository:
+## 它解决什么
 
-```bash
-branchguard init
-branchguard check main feature/login
-branchguard check main feature/login --json
-branchguard check main feature/login --markdown
-branchguard check main feature/login --markdown --output branchguard-report.md
-branchguard check main feature/login --html --output branchguard-report.html
-branchguard matrix --base main
-```
+小团队常见问题不是“不知道怎么解决冲突”，而是冲突发现太晚：
 
-Or run the local checkout:
+- PR 快合并时才发现一堆冲突。
+- 多个 feature 分支互相压着，谁先合都可能炸。
+- 新人、外包、并行需求多时，冲突责任人不好找。
+- IDE 内置工具好用，但 CI 和跨仓库协作不够直接。
 
-```bash
-node ./bin/branchguard.mjs check main feature/login
-```
+BranchGuard 的定位是提前预警：
 
-## Commands
+- 本地一行命令检查两个 ref 是否会冲突。
+- CI 里自动检查 PR。
+- 只让 `HIGH` 风险冲突阻塞合并，普通冲突先提醒。
+- 生成 Markdown / HTML / JSON 报告。
+- 给出目录风险摘要和最近贡献者提示。
 
-### `init`
-
-Creates a default `.branchguard.json` file.
-
-```bash
-node ./bin/branchguard.mjs init
-node ./bin/branchguard.mjs init --force
-```
+## 命令
 
 ### `doctor`
 
-Checks whether Git is available, whether the current directory is a Git repository, and whether modern `git merge-tree --write-tree` is available.
+检查 Git 是否可用、当前目录是否是 Git 仓库、Git 版本是否支持所需能力。
 
 ```bash
-node ./bin/branchguard.mjs doctor
+branchguard doctor
+```
+
+### `init`
+
+生成默认配置文件 `.branchguard.json`。
+
+```bash
+branchguard init
+branchguard init --force
 ```
 
 ### `check`
 
-Checks whether two refs can merge cleanly.
+检查两个 ref 是否可以干净合并。
 
 ```bash
-node ./bin/branchguard.mjs check <base> <head>
+branchguard check <base> <head>
 ```
 
-Example:
+示例：
 
 ```bash
-node ./bin/branchguard.mjs check main feature/login
-node ./bin/branchguard.mjs check main feature/login --markdown
-node ./bin/branchguard.mjs check main feature/login --markdown --output branchguard-report.md
-node ./bin/branchguard.mjs check main feature/login --html --output branchguard-report.html
+branchguard check main feature/login
+branchguard check origin/main HEAD --json
+branchguard check origin/main HEAD --markdown
+branchguard check origin/main HEAD --html --output branchguard-report.html
 ```
 
-Exit codes:
+退出码：
 
-- `0`: no conflict.
-- `1`: command or environment error.
-- `2`: conflicts detected.
+- `0`：检查成功，无冲突。
+- `1`：命令或环境错误，例如不是 Git 仓库、ref 不存在。
+- `2`：检查成功，但发现冲突。
 
 ### `matrix`
 
-Checks all local branches against a base branch.
+检查多个本地分支相对某个 base 的冲突矩阵。
 
 ```bash
-node ./bin/branchguard.mjs matrix --base main
-node ./bin/branchguard.mjs matrix --base main --limit 20
-node ./bin/branchguard.mjs matrix --base main --json
-node ./bin/branchguard.mjs matrix --base main --markdown
-node ./bin/branchguard.mjs matrix --base main --markdown --output branchguard-matrix.md
-node ./bin/branchguard.mjs matrix --base main --html --output branchguard-matrix.html
+branchguard matrix --base main
+branchguard matrix --base main --limit 20
+branchguard matrix --base main --markdown
+branchguard matrix --base main --html --output branchguard-matrix.html
 ```
 
-## Output Formats
+## 输出格式
 
-BranchGuard supports human text output by default, plus JSON, Markdown, and HTML for automation:
+默认输出人类可读文本，也支持 JSON、Markdown、HTML：
 
 ```bash
 branchguard check main feature/login --json
 branchguard check main feature/login --markdown
-branchguard check main feature/login --markdown --output branchguard-report.md
 branchguard check main feature/login --html --output branchguard-report.html
 ```
 
-`--output <file>` writes the same report that is printed to stdout. Parent directories are created automatically.
+`--output <file>` 会把同一份报告写入文件，父目录会自动创建。
 
-Markdown, HTML, and JSON reports include a directory summary so teams can quickly see which module or root-level file is creating the most risk.
+报告包含：
 
-HTML reports are self-contained files with inline CSS, so they work well as CI artifacts.
+- 冲突文件列表。
+- `LOW` / `MEDIUM` / `HIGH` 风险等级。
+- 按目录聚合的风险摘要。
+- 基于 `git log` 的最近贡献者提示。
+- 被配置忽略的冲突数量。
 
-Reports also include lightweight recent-contributor hints from `git log` on the base and head refs. These are not strict code ownership rules; they are quick routing hints for who may know the conflicting files best.
+HTML 报告是单文件内联 CSS，适合作为 CI artifact 上传。
 
-## CI
+## GitHub Action
 
-See [docs/examples/github-action.yml](./docs/examples/github-action.yml) for a GitHub pull request conflict check example.
-
-See [docs/examples/github-weekly-report.yml](./docs/examples/github-weekly-report.yml) for a scheduled weekly branch conflict report.
-
-See [docs/examples/gitlab-ci.yml](./docs/examples/gitlab-ci.yml) for a GitLab merge request conflict check example.
-
-Direct GitHub Action usage:
+PR 冲突检查示例：
 
 ```yaml
+name: BranchGuard
+
+on:
+  pull_request:
+    branches:
+      - main
+
 permissions:
   contents: read
   issues: write
   pull-requests: read
 
-steps:
-  - uses: actions/checkout@v6
-    with:
-      fetch-depth: 0
+jobs:
+  conflict-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-  - uses: wonderly321/branchguard-cli@main
-    with:
-      base: origin/main
-      head: HEAD
-      format: markdown
-      fail-on-risk: high
-      comment: "true"
-      github-token: ${{ github.token }}
+      - uses: wonderly321/branchguard-cli@v0.3.0
+        with:
+          base: origin/main
+          head: HEAD
+          format: markdown
+          fail-on-risk: high
+          comment: "true"
+          github-token: ${{ github.token }}
 ```
 
-For the published v0.2.0 action, pin the action without PR comments:
+`fail-on-risk` 支持：
+
+- `any`：有冲突就失败。
+- `high`：只在高风险冲突时失败。
+- `never`：只报告，不阻塞 CI。
+
+`comment: "true"` 会在 PR 下创建或更新一条 BranchGuard 评论。
+
+仓库里已经有真实 workflow 示例：[.github/workflows/branchguard.yml](./.github/workflows/branchguard.yml)。
+
+## 每周冲突报告
+
+可以定时生成分支冲突矩阵，并上传 HTML artifact：
 
 ```yaml
-- uses: wonderly321/branchguard-cli@v0.2.0
+- uses: wonderly321/branchguard-cli@v0.3.0
   with:
+    mode: matrix
     base: origin/main
-    head: HEAD
-    format: markdown
+    limit: 20
+    format: html
+    output: branchguard-weekly-report.html
+    fail-on-risk: high
+
+- uses: actions/upload-artifact@v7
+  if: always()
+  with:
+    name: branchguard-weekly-report
+    path: branchguard-weekly-report.html
 ```
 
-When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
+完整示例：[docs/examples/github-weekly-report.yml](./docs/examples/github-weekly-report.yml)。
 
-The step summary includes a scan-friendly result table, recommended next step, and detailed report.
+## 团队通知
 
-Use `fail-on-risk: high` when a team wants normal conflicts to create comments and summaries without blocking CI. Supported values are `any`, `high`, and `never`. The older `fail-on-conflict` input still works for compatibility.
-
-When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
-
-Team webhook notifications:
+GitHub Action 支持通用 webhook、飞书、钉钉：
 
 ```yaml
-- uses: wonderly321/branchguard-cli@main
+- uses: wonderly321/branchguard-cli@v0.3.0
   with:
     base: origin/main
     head: HEAD
@@ -189,58 +220,48 @@ Team webhook notifications:
     webhook-on: high
 ```
 
-`webhook-provider` supports `generic`, `feishu`, and `dingtalk`. `webhook-on` supports `conflict`, `high`, `always`, and `never`. Webhook delivery failures do not fail CI unless `webhook-fail-on-error: "true"` is set.
+`webhook-provider` 支持：
 
-HTML artifact usage:
+- `generic`
+- `feishu`
+- `dingtalk`
 
-```yaml
-- uses: wonderly321/branchguard-cli@main
-  with:
-    base: origin/main
-    head: HEAD
-    format: html
-    output: branchguard-report.html
-    fail-on-risk: high
+`webhook-on` 支持：
 
-- uses: actions/upload-artifact@v7
-  if: always()
-  with:
-    name: branchguard-report
-    path: branchguard-report.html
-```
+- `conflict`
+- `high`
+- `always`
+- `never`
 
-Weekly matrix report usage:
+webhook 发送失败默认不阻塞 CI。如需阻塞，可设置：
 
 ```yaml
-- uses: wonderly321/branchguard-cli@main
-  with:
-    mode: matrix
-    base: origin/main
-    limit: 20
-    format: html
-    output: branchguard-weekly-report.html
-    fail-on-risk: high
+webhook-fail-on-error: "true"
 ```
 
-## Risk Levels
+## 风险等级
 
-- `LOW`: no conflicts.
-- `MEDIUM`: one or two normal file conflicts.
-- `HIGH`: three or more conflicts, or conflicts in high-risk files.
+- `LOW`：没有冲突。
+- `MEDIUM`：一两个普通文件冲突。
+- `HIGH`：三个及以上冲突，或命中高风险文件。
 
-High-risk files currently include lock files, migrations, schema files, OpenAPI files, proto files, and GraphQL files.
+默认高风险文件包括：
 
-Directory risk is grouped from conflicting files. A directory is marked `HIGH` when it contains a high-risk conflict or three or more conflicting files.
+- lock files：`package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`Cargo.lock` 等。
+- migration：`db/migrations/**`、`migrations/**`。
+- schema / OpenAPI / GraphQL / proto 文件。
 
-## Configuration
+目录风险会根据目录下冲突数量和高风险文件聚合。
 
-Create a config file:
+## 配置
+
+创建配置：
 
 ```bash
-node ./bin/branchguard.mjs init
+branchguard init
 ```
 
-Default `.branchguard.json`:
+默认 `.branchguard.json`：
 
 ```json
 {
@@ -266,25 +287,37 @@ Default `.branchguard.json`:
 }
 ```
 
-`highRiskPatterns` marks matching conflicts as `HIGH`.
+`highRiskPatterns` 用于把匹配文件标为 `HIGH`。
 
-`ignorePatterns` removes matching conflicts from actionable results. If all conflicts are ignored, BranchGuard exits with `0` and reports `ignored_conflict_count` in JSON.
+`ignorePatterns` 用于忽略非行动项冲突。如果所有冲突都被忽略，BranchGuard 返回 `0`，JSON 里仍会保留 `ignored_conflict_count`。
 
-## Design Notes
+## 设计原则
 
-BranchGuard is read-only. It does not create merge commits, change branches, write to the index, or upload code.
+BranchGuard 是只读工具：
 
-On newer Git versions it uses modern `git merge-tree --write-tree`. On this development machine Git is `2.37.2`, so the prototype also supports the older `git merge-tree <base-tree> <branch1> <branch2>` output format.
+- 不创建 merge commit。
+- 不切换分支。
+- 不写 Git index。
+- 不上传代码。
+- 不依赖云服务。
 
-## SDD
+在新版本 Git 上优先使用 `git merge-tree --write-tree`。在 Git 2.37 这类旧版本上，会回退解析旧版 `git merge-tree <base-tree> <branch1> <branch2>` 输出。
 
-The specification-driven development docs are in [docs/sdd](./docs/sdd).
+## 文档
 
-## Product Docs
+- [产品路线图](./docs/product-roadmap.md)
+- [v0.3.0 发布说明](./docs/releases/v0.3.0.md)
+- [v0.2.0 发布说明](./docs/releases/v0.2.0.md)
+- [v0.1.0 发布说明](./docs/releases/v0.1.0.md)
+- [发布清单](./docs/release-checklist.md)
+- [npm 发布指南](./docs/npm-publish.md)
+- [SDD 文档](./docs/sdd)
 
-- [Product roadmap](./docs/product-roadmap.md)
-- [v0.3.0 release notes](./docs/releases/v0.3.0.md)
-- [v0.2.0 release notes](./docs/releases/v0.2.0.md)
-- [v0.1.0 release notes](./docs/releases/v0.1.0.md)
-- [Release checklist](./docs/release-checklist.md)
-- [npm publish guide](./docs/npm-publish.md)
+## 适合谁
+
+BranchGuard 现在最适合：
+
+- 每周都遇到 Git 冲突的小团队。
+- 多分支并行开发的业务团队。
+- 想在 PR 阶段提前发现风险的 Tech Lead。
+- 想要一个轻量、透明、可放进 CI 的 Git 冲突预检工具的人。
