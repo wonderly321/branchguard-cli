@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560" role="img" aria-labelledby="title desc">
+  <title id="title">BranchGuard terminal demo</title>
+  <desc id="desc">A terminal-style BranchGuard report showing merge conflict risk, directory summary, and recommendations.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef3ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0f172a" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <rect width="980" height="560" fill="#f4f6fb"/>
+  <g filter="url(#shadow)">
+    <rect x="64" y="52" width="852" height="456" rx="10" fill="#111827"/>
+    <rect x="64" y="52" width="852" height="44" rx="10" fill="url(#header)"/>
+    <rect x="64" y="84" width="852" height="12" fill="#f8fafc"/>
+    <circle cx="92" cy="74" r="6" fill="#ef4444"/>
+    <circle cx="114" cy="74" r="6" fill="#f59e0b"/>
+    <circle cx="136" cy="74" r="6" fill="#22c55e"/>
+    <text x="490" y="79" text-anchor="middle" fill="#334155" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">branchguard check origin/main HEAD --markdown</text>
+
+    <g font-family="Consolas, 'SFMono-Regular', monospace" font-size="17">
+      <text x="94" y="134" fill="#93c5fd">$ branchguard check origin/main HEAD --markdown</text>
+      <text x="94" y="176" fill="#f8fafc" font-size="25" font-weight="700"># BranchGuard Report</text>
+      <text x="94" y="218" fill="#cbd5e1">Base: <tspan fill="#e0f2fe">origin/main</tspan></text>
+      <text x="94" y="250" fill="#cbd5e1">Head: <tspan fill="#e0f2fe">HEAD</tspan></text>
+      <text x="94" y="282" fill="#cbd5e1">Risk: <tspan fill="#fbbf24" font-weight="700">HIGH</tspan></text>
+      <text x="94" y="314" fill="#cbd5e1">Conflicts: <tspan fill="#f8fafc" font-weight="700">3 files</tspan></text>
+
+      <text x="94" y="364" fill="#f8fafc" font-size="21" font-weight="700">Directory Summary</text>
+      <text x="94" y="398" fill="#94a3b8">Directory        Conflicts   Risk   Recent contributors</text>
+      <text x="94" y="430" fill="#e2e8f0">src/auth         2           HIGH   Feature Owner, Main Owner</text>
+      <text x="94" y="462" fill="#e2e8f0">package-lock     1           HIGH   BranchGuard Test</text>
+
+      <text x="548" y="218" fill="#f8fafc" font-size="21" font-weight="700">Recommendation</text>
+      <text x="548" y="256" fill="#cbd5e1">- Rebase this branch sooner.</text>
+      <text x="548" y="288" fill="#cbd5e1">- Start with high-risk files.</text>
+      <text x="548" y="320" fill="#cbd5e1">- Coordinate recent owners.</text>
+
+      <rect x="548" y="368" width="250" height="52" rx="8" fill="#1f2937" stroke="#334155"/>
+      <text x="574" y="401" fill="#86efac" font-weight="700">CI policy: fail on HIGH</text>
+    </g>
+  </g>
+</svg>

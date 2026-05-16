@@ -14,7 +14,9 @@ It answers one practical question before you merge:
 
 > Will this branch conflict with my base branch, and where?
 
-Current status: v0.2 is published on npm. The `main` branch is prepared for v0.3.0 with team workflow features; npm publish still requires a local token/OTP step. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
+Current status: v0.3.0 is published on npm. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
+
+![BranchGuard terminal demo](./docs/assets/branchguard-demo.svg)
 
 ## Usage
 
