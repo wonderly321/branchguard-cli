@@ -124,6 +124,16 @@ Direct GitHub Action usage:
     format: markdown
 ```
 
+After the v0.2.0 tag is available, pin the action:
+
+```yaml
+- uses: wonderly321/branchguard-cli@v0.2.0
+  with:
+    base: origin/main
+    head: HEAD
+    format: markdown
+```
+
 When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
 
 ## Risk Levels

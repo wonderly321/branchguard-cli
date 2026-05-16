@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check merge conflicts
-        uses: wonderly321/branchguard-cli@main
+        uses: wonderly321/branchguard-cli@v0.2.0
         with:
           base: origin/main
           head: HEAD
