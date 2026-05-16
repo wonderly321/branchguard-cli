@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Added:
+
+- `--output <file>` for `check` and `matrix` reports.
+- GitHub Action pull request comment creation/update via `comment: "true"`.
+- GitHub Action outputs for `comment-written` and `comment-url`.
+
 ## 0.2.0
 
 Prepared for npm release as `branchguard-cli@0.2.0`.

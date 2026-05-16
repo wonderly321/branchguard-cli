@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -130,49 +130,45 @@ function handleInit(args) {
 }
 
 function handleCheck(args) {
-  const output = parseOutputFormat(args);
-  if (output.error) {
-    printMaybeJsonError(output.error, output.format === "json");
+  const options = parseCheckArgs(args);
+  if (options.error) {
+    printMaybeJsonError(options.error, options.format === "json");
     return EXIT_ERROR;
   }
 
-  const positional = args.filter((arg) => arg !== "--json" && arg !== "--markdown");
-
-  if (positional.length !== 2) {
+  if (options.positional.length !== 2) {
     const error = {
       code: "INVALID_ARGUMENTS",
       message: "check requires <base> and <head>",
       hint: "example: branchguard check main feature/login",
     };
-    printMaybeJsonError(error, output.format === "json");
+    printMaybeJsonError(error, options.format === "json");
     return EXIT_ERROR;
   }
 
-  const [base, head] = positional;
+  const [base, head] = options.positional;
   const preflight = preflightCheck(base, head);
   if (!preflight.ok) {
-    printMaybeJsonError(preflight.error, output.format === "json");
+    printMaybeJsonError(preflight.error, options.format === "json");
     return EXIT_ERROR;
   }
 
   const config = loadConfig();
   if (config.error) {
-    printMaybeJsonError(config.error, output.format === "json");
+    printMaybeJsonError(config.error, options.format === "json");
     return EXIT_ERROR;
   }
 
   const result = checkBranches(base, head, config);
   if (result.error) {
-    printMaybeJsonError(result.error, output.format === "json");
+    printMaybeJsonError(result.error, options.format === "json");
     return EXIT_ERROR;
   }
 
-  if (output.format === "json") {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (output.format === "markdown") {
-    printCheckMarkdown(result);
-  } else {
-    printCheckResult(result);
+  const emit = emitReport(renderCheckReport(result, options.format), options.outputPath);
+  if (emit.error) {
+    printMaybeJsonError(emit.error, options.format === "json");
+    return EXIT_ERROR;
   }
 
   return result.has_conflict ? EXIT_CONFLICT : EXIT_OK;
@@ -242,15 +238,71 @@ function handleMatrix(args) {
     entries,
   };
 
-  if (options.format === "json") {
-    console.log(JSON.stringify(matrix, null, 2));
-  } else if (options.format === "markdown") {
-    printMatrixMarkdown(matrix);
-  } else {
-    printMatrixResult(matrix);
+  const emit = emitReport(renderMatrixReport(matrix, options.format), options.outputPath);
+  if (emit.error) {
+    printMaybeJsonError(emit.error, options.format === "json");
+    return EXIT_ERROR;
   }
 
   return entries.some((entry) => entry.has_conflict) ? EXIT_CONFLICT : EXIT_OK;
+}
+
+function parseCheckArgs(args) {
+  const result = {
+    format: "text",
+    outputPath: "",
+    positional: [],
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--json" || arg === "--markdown") {
+      const output = parseOutputFormat([arg], result.format);
+      if (output.error) {
+        result.error = output.error;
+        return result;
+      }
+      result.format = output.format;
+      continue;
+    }
+
+    if (arg === "--output") {
+      const outputPath = args[index + 1] || "";
+      if (!outputPath || outputPath.startsWith("--")) {
+        result.error = {
+          code: "MISSING_OUTPUT_PATH",
+          message: "missing value for --output",
+          hint: "example: branchguard check main feature --markdown --output branchguard-report.md",
+        };
+        return result;
+      }
+      if (result.outputPath) {
+        result.error = {
+          code: "DUPLICATE_OUTPUT",
+          message: "use --output only once",
+          hint: "example: --output branchguard-report.md",
+        };
+        return result;
+      }
+      result.outputPath = outputPath;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--")) {
+      result.error = {
+        code: "UNKNOWN_OPTION",
+        message: `unknown check option "${arg}"`,
+        hint: "example: branchguard check main feature/login --markdown",
+      };
+      return result;
+    }
+
+    result.positional.push(arg);
+  }
+
+  return result;
 }
 
 function parseMatrixArgs(args) {
@@ -258,6 +310,7 @@ function parseMatrixArgs(args) {
     base: "",
     format: "text",
     limit: 20,
+    outputPath: "",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -290,6 +343,29 @@ function parseMatrixArgs(args) {
         return result;
       }
       result.limit = limit;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--output") {
+      const outputPath = args[index + 1] || "";
+      if (!outputPath || outputPath.startsWith("--")) {
+        result.error = {
+          code: "MISSING_OUTPUT_PATH",
+          message: "missing value for --output",
+          hint: "example: branchguard matrix --base main --markdown --output branchguard-matrix.md",
+        };
+        return result;
+      }
+      if (result.outputPath) {
+        result.error = {
+          code: "DUPLICATE_OUTPUT",
+          message: "use --output only once",
+          hint: "example: --output branchguard-matrix.md",
+        };
+        return result;
+      }
+      result.outputPath = outputPath;
       index += 1;
       continue;
     }
@@ -781,77 +857,111 @@ function looksLikePath(value) {
   );
 }
 
-function printCheckResult(result) {
-  console.log("BranchGuard");
-  console.log(`Base: ${result.base}`);
-  console.log(`Head: ${result.head}`);
-  console.log("");
-  console.log(`Risk: ${result.risk_level}`);
-  console.log(`Conflicts: ${result.conflict_count} file${result.conflict_count === 1 ? "" : "s"}`);
-
-  if (result.conflict_files.length > 0) {
-    console.log("");
-    for (const file of result.conflict_files) {
-      console.log(`${file.path}${file.risk === "HIGH" ? "  [HIGH]" : ""}`);
-    }
-    console.log("");
-    console.log("Suggestion:");
-    console.log("- Merge or rebase this branch sooner.");
-    console.log("- Coordinate with owners of the conflicting files.");
-    if (result.risk_level === "HIGH") {
-      console.log("- Review high-risk files carefully before merging.");
-    }
-  } else {
-    console.log("");
-    console.log("No merge conflicts detected.");
-    if (result.ignored_conflict_count > 0) {
-      console.log(`Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}`);
-    }
+function renderCheckReport(result, format) {
+  if (format === "json") {
+    return JSON.stringify(result, null, 2);
   }
+
+  if (format === "markdown") {
+    return renderCheckMarkdown(result);
+  }
+
+  return renderCheckText(result);
 }
 
-function printCheckMarkdown(result) {
-  console.log("# BranchGuard Report");
-  console.log("");
-  console.log(`**Base:** ${inlineCode(result.base)}`);
-  console.log(`**Head:** ${inlineCode(result.head)}`);
-  console.log(`**Risk:** ${result.risk_level}`);
-  console.log(`**Conflicts:** ${result.conflict_count} file${result.conflict_count === 1 ? "" : "s"}`);
-  console.log("");
-  console.log(result.summary);
+function renderMatrixReport(matrix, format) {
+  if (format === "json") {
+    return JSON.stringify(matrix, null, 2);
+  }
+
+  if (format === "markdown") {
+    return renderMatrixMarkdown(matrix);
+  }
+
+  return renderMatrixText(matrix);
+}
+
+function renderCheckText(result) {
+  const lines = [
+    "BranchGuard",
+    `Base: ${result.base}`,
+    `Head: ${result.head}`,
+    "",
+    `Risk: ${result.risk_level}`,
+    `Conflicts: ${result.conflict_count} file${result.conflict_count === 1 ? "" : "s"}`,
+  ];
 
   if (result.conflict_files.length > 0) {
-    console.log("");
-    console.log("| File | Type | Risk |");
-    console.log("| --- | --- | --- |");
+    lines.push("");
     for (const file of result.conflict_files) {
-      console.log(`| ${inlineCode(file.path)} | ${escapeMarkdownCell(file.type)} | ${escapeMarkdownCell(file.risk)} |`);
+      lines.push(`${file.path}${file.risk === "HIGH" ? "  [HIGH]" : ""}`);
     }
-    console.log("");
-    console.log("## Recommendation");
-    console.log("");
-    console.log("- Merge or rebase this branch sooner.");
-    console.log("- Coordinate with owners of the conflicting files.");
+    lines.push("");
+    lines.push("Suggestion:");
+    lines.push("- Merge or rebase this branch sooner.");
+    lines.push("- Coordinate with owners of the conflicting files.");
     if (result.risk_level === "HIGH") {
-      console.log("- Review high-risk files carefully before merging.");
+      lines.push("- Review high-risk files carefully before merging.");
+    }
+  } else {
+    lines.push("");
+    lines.push("No merge conflicts detected.");
+    if (result.ignored_conflict_count > 0) {
+      lines.push(`Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function renderCheckMarkdown(result) {
+  const lines = [
+    "# BranchGuard Report",
+    "",
+    `**Base:** ${inlineCode(result.base)}`,
+    `**Head:** ${inlineCode(result.head)}`,
+    `**Risk:** ${result.risk_level}`,
+    `**Conflicts:** ${result.conflict_count} file${result.conflict_count === 1 ? "" : "s"}`,
+    "",
+    result.summary,
+  ];
+
+  if (result.conflict_files.length > 0) {
+    lines.push("");
+    lines.push("| File | Type | Risk |");
+    lines.push("| --- | --- | --- |");
+    for (const file of result.conflict_files) {
+      lines.push(`| ${inlineCode(file.path)} | ${escapeMarkdownCell(file.type)} | ${escapeMarkdownCell(file.risk)} |`);
+    }
+    lines.push("");
+    lines.push("## Recommendation");
+    lines.push("");
+    lines.push("- Merge or rebase this branch sooner.");
+    lines.push("- Coordinate with owners of the conflicting files.");
+    if (result.risk_level === "HIGH") {
+      lines.push("- Review high-risk files carefully before merging.");
     }
   }
 
   if (result.ignored_conflict_count > 0) {
-    console.log("");
-    console.log(`Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}.`);
+    lines.push("");
+    lines.push(`Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}.`);
   }
+
+  return lines.join("\n");
 }
 
-function printMatrixResult(matrix) {
-  console.log("BranchGuard Matrix");
-  console.log(`Base: ${matrix.base}`);
-  console.log(`Branches: ${matrix.branch_count}`);
-  console.log("");
+function renderMatrixText(matrix) {
+  const lines = [
+    "BranchGuard Matrix",
+    `Base: ${matrix.base}`,
+    `Branches: ${matrix.branch_count}`,
+    "",
+  ];
 
   if (matrix.entries.length === 0) {
-    console.log("No local branches to compare.");
-    return;
+    lines.push("No local branches to compare.");
+    return lines.join("\n");
   }
 
   const branchWidth = Math.max(
@@ -861,38 +971,44 @@ function printMatrixResult(matrix) {
   const conflictWidth = "Conflicts".length;
   const riskWidth = "Risk".length;
 
-  console.log(
+  lines.push(
     `${padRight("Branch", branchWidth)}  ${padRight("Conflicts", conflictWidth)}  ${padRight("Risk", riskWidth)}`,
   );
-  console.log(`${"-".repeat(branchWidth)}  ${"-".repeat(conflictWidth)}  ${"-".repeat(riskWidth)}`);
+  lines.push(`${"-".repeat(branchWidth)}  ${"-".repeat(conflictWidth)}  ${"-".repeat(riskWidth)}`);
 
   for (const entry of matrix.entries) {
-    console.log(
+    lines.push(
       `${padRight(entry.branch, branchWidth)}  ${padRight(String(entry.conflict_count), conflictWidth)}  ${padRight(entry.risk_level, riskWidth)}`,
     );
   }
+
+  return lines.join("\n");
 }
 
-function printMatrixMarkdown(matrix) {
-  console.log("# BranchGuard Matrix");
-  console.log("");
-  console.log(`**Base:** ${inlineCode(matrix.base)}`);
-  console.log(`**Branches:** ${matrix.branch_count}`);
+function renderMatrixMarkdown(matrix) {
+  const lines = [
+    "# BranchGuard Matrix",
+    "",
+    `**Base:** ${inlineCode(matrix.base)}`,
+    `**Branches:** ${matrix.branch_count}`,
+  ];
 
   if (matrix.entries.length === 0) {
-    console.log("");
-    console.log("No local branches to compare.");
-    return;
+    lines.push("");
+    lines.push("No local branches to compare.");
+    return lines.join("\n");
   }
 
-  console.log("");
-  console.log("| Branch | Conflicts | Risk |");
-  console.log("| --- | ---: | --- |");
+  lines.push("");
+  lines.push("| Branch | Conflicts | Risk |");
+  lines.push("| --- | ---: | --- |");
   for (const entry of matrix.entries) {
-    console.log(
+    lines.push(
       `| ${inlineCode(entry.branch)} | ${entry.conflict_count} | ${escapeMarkdownCell(entry.risk_level)} |`,
     );
   }
+
+  return lines.join("\n");
 }
 
 function printDoctor(result) {
@@ -909,8 +1025,8 @@ function printHelp() {
 
 Usage:
   branchguard init [--force] [--json]
-  branchguard check <base> <head> [--json|--markdown]
-  branchguard matrix --base <base> [--limit 20] [--json|--markdown]
+  branchguard check <base> <head> [--json|--markdown] [--output <file>]
+  branchguard matrix --base <base> [--limit 20] [--json|--markdown] [--output <file>]
   branchguard doctor
   branchguard --version
   branchguard --help
@@ -920,6 +1036,7 @@ Examples:
   branchguard check main feature/login
   branchguard check origin/main HEAD --json
   branchguard check origin/main HEAD --markdown
+  branchguard check origin/main HEAD --markdown --output branchguard-report.md
   branchguard matrix --base main
 `);
 }
@@ -949,6 +1066,29 @@ function inlineCode(value) {
 
 function escapeMarkdownCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function emitReport(report, outputPath) {
+  console.log(report);
+
+  if (!outputPath) {
+    return { ok: true };
+  }
+
+  try {
+    const resolvedOutputPath = resolve(process.cwd(), outputPath);
+    mkdirSync(dirname(resolvedOutputPath), { recursive: true });
+    writeFileSync(resolvedOutputPath, `${report}\n`, "utf8");
+    return { ok: true, output_path: resolvedOutputPath };
+  } catch (error) {
+    return {
+      error: {
+        code: "OUTPUT_WRITE_FAILED",
+        message: `could not write report to "${outputPath}"`,
+        hint: error.message,
+      },
+    };
+  }
 }
 
 function isMainModule() {

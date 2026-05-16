@@ -5,6 +5,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
 jobs:
   conflict-check:
     runs-on: ubuntu-latest
@@ -15,8 +20,10 @@ jobs:
           fetch-depth: 0
 
       - name: Check merge conflicts
-        uses: wonderly321/branchguard-cli@v0.2.0
+        uses: wonderly321/branchguard-cli@main
         with:
           base: origin/main
           head: HEAD
           format: markdown
+          comment: "true"
+          github-token: ${{ github.token }}

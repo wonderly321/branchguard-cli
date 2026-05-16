@@ -26,7 +26,7 @@ Planned:
 - GitHub Action wrapper. (done on `main`; release as `v0.2.0`)
 - GitLab CI example. (done on `main`; release as `v0.2.0`)
 - Markdown report output. (done on `main`; release as `v0.2.0`)
-- PR comment body generation.
+- PR comment creation/update. (done on `main`; release later)
 - Better modern `git merge-tree --write-tree` parsing on newer Git versions. (done on `main`; release as `v0.2.0`)
 
 Tracking issues:
@@ -41,6 +41,7 @@ Goal: Make it valuable for small teams instead of only individuals.
 
 Planned:
 
+- Report file output for CI artifacts. (done on `main`; release later)
 - Branch owner detection via `git blame`.
 - Risk summary grouped by directory.
 - Weekly conflict report.

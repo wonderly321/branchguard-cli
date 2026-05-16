@@ -14,7 +14,7 @@ It answers one practical question before you merge:
 
 > Will this branch conflict with my base branch, and where?
 
-Current status: v0.2 CI-ready prototype. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
+Current status: v0.2 is published. The `main` branch is moving toward v0.3 PR reporting. The implementation is a zero-dependency Node.js CLI so the product workflow can be validated quickly. The SDD documents still keep the longer-term Go/Rust single-binary direction.
 
 ## Usage
 
@@ -39,6 +39,7 @@ branchguard init
 branchguard check main feature/login
 branchguard check main feature/login --json
 branchguard check main feature/login --markdown
+branchguard check main feature/login --markdown --output branchguard-report.md
 branchguard matrix --base main
 ```
 
@@ -80,6 +81,7 @@ Example:
 ```bash
 node ./bin/branchguard.mjs check main feature/login
 node ./bin/branchguard.mjs check main feature/login --markdown
+node ./bin/branchguard.mjs check main feature/login --markdown --output branchguard-report.md
 ```
 
 Exit codes:
@@ -97,6 +99,7 @@ node ./bin/branchguard.mjs matrix --base main
 node ./bin/branchguard.mjs matrix --base main --limit 20
 node ./bin/branchguard.mjs matrix --base main --json
 node ./bin/branchguard.mjs matrix --base main --markdown
+node ./bin/branchguard.mjs matrix --base main --markdown --output branchguard-matrix.md
 ```
 
 ## Output Formats
@@ -106,7 +109,10 @@ BranchGuard supports human text output by default, plus JSON and Markdown for au
 ```bash
 branchguard check main feature/login --json
 branchguard check main feature/login --markdown
+branchguard check main feature/login --markdown --output branchguard-report.md
 ```
+
+`--output <file>` writes the same report that is printed to stdout. Parent directories are created automatically.
 
 ## CI
 
@@ -117,14 +123,26 @@ See [docs/examples/gitlab-ci.yml](./docs/examples/gitlab-ci.yml) for a GitLab me
 Direct GitHub Action usage:
 
 ```yaml
-- uses: wonderly321/branchguard-cli@main
-  with:
-    base: origin/main
-    head: HEAD
-    format: markdown
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+
+  - uses: wonderly321/branchguard-cli@main
+    with:
+      base: origin/main
+      head: HEAD
+      format: markdown
+      comment: "true"
+      github-token: ${{ github.token }}
 ```
 
-After the v0.2.0 tag is available, pin the action:
+For the published v0.2.0 action, pin the action without PR comments:
 
 ```yaml
 - uses: wonderly321/branchguard-cli@v0.2.0
@@ -135,6 +153,8 @@ After the v0.2.0 tag is available, pin the action:
 ```
 
 When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
+
+When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
 
 ## Risk Levels
 

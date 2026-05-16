@@ -31,6 +31,17 @@ inputs:
     description: Write the BranchGuard report to the GitHub Actions step summary.
     required: false
     default: "true"
+  comment:
+    description: Create or update a pull request comment with the BranchGuard report.
+    required: false
+    default: "false"
+  comment-header:
+    description: Hidden marker used to find and update an existing BranchGuard pull request comment.
+    required: false
+    default: "<!-- branchguard-report -->"
+  github-token:
+    description: GitHub token used when comment is true.
+    required: false
   working-directory:
     description: Repository directory to run BranchGuard in.
     required: false
@@ -45,6 +56,10 @@ outputs:
     description: BranchGuard stdout report.
   summary-written:
     description: Whether BranchGuard wrote to the GitHub Actions step summary.
+  comment-written:
+    description: Whether BranchGuard created or updated a pull request comment.
+  comment-url:
+    description: URL of the pull request comment when available.
 
 runs:
   using: node20

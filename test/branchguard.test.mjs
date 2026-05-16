@@ -160,6 +160,25 @@ test("prints markdown reports for check and matrix", () => {
   }
 });
 
+test("writes check and matrix reports to output files", () => {
+  const repo = createFixtureRepo();
+  const reportPath = join(dirname(repo), "reports", "branchguard-report.md");
+  const matrixPath = join(dirname(repo), "reports", "branchguard-matrix.md");
+  try {
+    const check = runCli(["check", "main", "feature-conflict", "--markdown", "--output", reportPath], repo);
+    assert.equal(check.status, 2);
+    assert.match(check.stdout, /# BranchGuard Report/);
+    assert.match(readFileSync(reportPath, "utf8"), /\| `app.txt` \| content \| MEDIUM \|/);
+
+    const matrix = runCli(["matrix", "--base", "main", "--markdown", "--output", matrixPath], repo);
+    assert.equal(matrix.status, 2);
+    assert.match(matrix.stdout, /# BranchGuard Matrix/);
+    assert.match(readFileSync(matrixPath, "utf8"), /\| `feature-conflict` \| 1 \| MEDIUM \|/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("github action wrapper reports conflicts without failing when configured", () => {
   const repo = createFixtureRepo();
   const outputPath = join(dirname(repo), "github-output.txt");
@@ -182,6 +201,38 @@ test("github action wrapper reports conflicts without failing when configured", 
     assert.match(output, /conflict<<branchguard_conflict_/);
     assert.match(output, /\ntrue\nbranchguard_conflict_/);
     assert.match(output, /"has_conflict": true/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
+test("github action wrapper writes pull request comment in mock mode", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  const commentPath = join(dirname(repo), "github-comment.jsonl");
+  try {
+    const result = runAction(repo, {
+      BRANCHGUARD_COMMENT_MOCK_FILE: commentPath,
+      GITHUB_OUTPUT: outputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_COMMENT: "true",
+      INPUT_FAIL_ON_CONFLICT: "false",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /comment-written<<branchguard_comment-written_/);
+    assert.match(output, /\ntrue\nbranchguard_comment-written_/);
+    assert.match(output, /comment-url<<branchguard_comment-url_/);
+
+    const comment = JSON.parse(readFileSync(commentPath, "utf8").trim());
+    assert.match(comment.body, /<!-- branchguard-report -->/);
+    assert.match(comment.body, /# BranchGuard Report/);
+    assert.match(comment.body, /\| `app.txt` \| content \| MEDIUM \|/);
   } finally {
     rmSync(dirname(repo), { recursive: true, force: true });
   }
