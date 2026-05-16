@@ -45,6 +45,7 @@ Planned:
 - Recent-contributor hints via `git log`. (done on `main`; release later)
 - Risk summary grouped by directory. (done on `main`; release later)
 - Productized GitHub Actions step summary. (done on `main`; release later)
+- Configurable GitHub Action failure policy by risk level. (done on `main`; release later)
 - Weekly conflict report.
 - Feishu/DingTalk webhook output.
 - HTML report.

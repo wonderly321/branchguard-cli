@@ -10,6 +10,7 @@ Added:
 - Directory risk summary in check JSON, text, and Markdown reports.
 - Recent-contributor hints for conflict files and directory summaries.
 - Productized GitHub Actions step summary with result table and recommended next step.
+- GitHub Action `fail-on-risk` policy with `risk-level` and `failure-policy` outputs.
 
 ## 0.2.0
 

@@ -27,6 +27,9 @@ inputs:
     description: Fail the workflow when BranchGuard detects conflicts.
     required: false
     default: "true"
+  fail-on-risk:
+    description: Failure policy for detected conflicts. Supported values are any, high, and never. Overrides fail-on-conflict when set.
+    required: false
   summary:
     description: Write the BranchGuard report to the GitHub Actions step summary.
     required: false
@@ -56,6 +59,10 @@ outputs:
     description: BranchGuard exit code. 0 is clean, 1 is error, 2 is conflict.
   conflict:
     description: Whether BranchGuard detected conflicts.
+  risk-level:
+    description: BranchGuard risk level. LOW, MEDIUM, or HIGH.
+  failure-policy:
+    description: Effective workflow failure policy.
   report:
     description: BranchGuard stdout report.
   summary-written:

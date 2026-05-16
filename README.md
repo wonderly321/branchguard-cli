@@ -142,6 +142,7 @@ steps:
       base: origin/main
       head: HEAD
       format: markdown
+      fail-on-risk: high
       comment: "true"
       github-token: ${{ github.token }}
 ```
@@ -159,6 +160,8 @@ For the published v0.2.0 action, pin the action without PR comments:
 When `format: markdown` is used, the Action can also write the report to the GitHub Actions step summary.
 
 The step summary includes a scan-friendly result table, recommended next step, and detailed report.
+
+Use `fail-on-risk: high` when a team wants normal conflicts to create comments and summaries without blocking CI. Supported values are `any`, `high`, and `never`. The older `fail-on-conflict` input still works for compatibility.
 
 When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
 

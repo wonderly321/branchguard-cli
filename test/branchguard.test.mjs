@@ -226,16 +226,68 @@ test("github action wrapper reports conflicts without failing when configured", 
     });
 
     assert.equal(result.status, 0);
-    assert.match(result.stdout, /BranchGuard detected conflicts/);
+    assert.match(result.stdout, /BranchGuard detected MEDIUM conflicts/);
 
     const output = readFileSync(outputPath, "utf8");
     assert.match(output, /exit-code<<branchguard_exit-code_/);
     assert.match(output, /\n2\nbranchguard_exit-code_/);
     assert.match(output, /conflict<<branchguard_conflict_/);
     assert.match(output, /\ntrue\nbranchguard_conflict_/);
+    assert.match(output, /failure-policy<<branchguard_failure-policy_/);
+    assert.match(output, /\nnever\nbranchguard_failure-policy_/);
     assert.match(output, /"has_conflict": true/);
   } finally {
     rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
+test("github action wrapper can fail only on high risk conflicts", () => {
+  const mediumRepo = createFixtureRepo();
+  const mediumOutputPath = join(dirname(mediumRepo), "github-output.txt");
+  try {
+    const medium = runAction(mediumRepo, {
+      GITHUB_OUTPUT: mediumOutputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_RISK: "high",
+      INPUT_WORKING_DIRECTORY: mediumRepo,
+    });
+
+    assert.equal(medium.status, 0);
+    const mediumOutput = readFileSync(mediumOutputPath, "utf8");
+    assert.match(mediumOutput, /risk-level<<branchguard_risk-level_/);
+    assert.match(mediumOutput, /\nMEDIUM\nbranchguard_risk-level_/);
+    assert.match(mediumOutput, /failure-policy<<branchguard_failure-policy_/);
+    assert.match(mediumOutput, /\nhigh\nbranchguard_failure-policy_/);
+  } finally {
+    rmSync(dirname(mediumRepo), { recursive: true, force: true });
+  }
+
+  const highRepo = createFixtureRepo();
+  const highOutputPath = join(dirname(highRepo), "github-output.txt");
+  try {
+    writeFileSync(
+      join(highRepo, ".branchguard.json"),
+      JSON.stringify({ highRiskPatterns: ["app.txt"] }, null, 2),
+      "utf8",
+    );
+
+    const high = runAction(highRepo, {
+      GITHUB_OUTPUT: highOutputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_RISK: "high",
+      INPUT_WORKING_DIRECTORY: highRepo,
+    });
+
+    assert.equal(high.status, 2);
+    const highOutput = readFileSync(highOutputPath, "utf8");
+    assert.match(highOutput, /\nHIGH\nbranchguard_risk-level_/);
+    assert.match(highOutput, /\nhigh\nbranchguard_failure-policy_/);
+  } finally {
+    rmSync(dirname(highRepo), { recursive: true, force: true });
   }
 });
 
@@ -296,6 +348,8 @@ test("github action wrapper writes markdown step summary", () => {
     const summary = readFileSync(summaryPath, "utf8");
     assert.match(summary, /# BranchGuard Pull Request Check/);
     assert.match(summary, /\| Result \| Conflicts detected \|/);
+    assert.match(summary, /\| Risk \| MEDIUM \|/);
+    assert.match(summary, /\| Failure policy \| `never` \|/);
     assert.match(summary, /\| Workflow status \| Passing \|/);
     assert.match(summary, /## Recommended Next Step/);
     assert.match(summary, /## Detailed Report/);

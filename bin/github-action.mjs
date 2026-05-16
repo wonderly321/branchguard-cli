@@ -13,6 +13,7 @@ const base = getInput("base") || "origin/main";
 const head = getInput("head") || "HEAD";
 const format = normalizeFormat(getInput("format"), getInput("json"));
 const failOnConflict = parseBooleanInput(getInput("fail-on-conflict"), true);
+const failurePolicy = normalizeFailurePolicy(getInput("fail-on-risk"), failOnConflict);
 const writeStepSummary = parseBooleanInput(getInput("summary"), true);
 const summaryTitle = getInput("summary-title") || "BranchGuard CI Summary";
 const writePrComment = parseBooleanInput(getInput("comment"), false);
@@ -49,10 +50,13 @@ if (result.error) {
 const exitCode = result.error ? 1 : typeof result.status === "number" ? result.status : 1;
 const conflict = exitCode === 2;
 const report = (result.stdout || "").trim();
-const workflowWillFail = exitCode === 1 || (conflict && failOnConflict);
+const riskLevel = extractRiskLevel(report, format, conflict);
+const workflowWillFail = shouldFailWorkflow({ exitCode, conflict, riskLevel, failurePolicy });
 
 writeOutput("exit-code", String(exitCode));
 writeOutput("conflict", String(conflict));
+writeOutput("risk-level", riskLevel);
+writeOutput("failure-policy", failurePolicy);
 if (report) {
   writeOutput("report", report);
 }
@@ -63,6 +67,8 @@ const summaryWritten = writeSummary(report, {
   head,
   exitCode,
   conflict,
+  riskLevel,
+  failurePolicy,
   format,
   workflowWillFail,
 });
@@ -83,8 +89,8 @@ if (commentResult.error) {
   process.exit(1);
 }
 
-if (conflict && !failOnConflict) {
-  console.log("BranchGuard detected conflicts, but fail-on-conflict is false.");
+if (conflict && !workflowWillFail) {
+  console.log(`BranchGuard detected ${riskLevel} conflicts, but failure policy is ${failurePolicy}.`);
   process.exit(0);
 }
 
@@ -121,6 +127,64 @@ function parseBooleanInput(value, fallback) {
   return fallback;
 }
 
+function normalizeFailurePolicy(value, failOnConflict) {
+  const policy = String(value || "").trim().toLowerCase();
+  if (["any", "high", "never"].includes(policy)) {
+    return policy;
+  }
+
+  return failOnConflict ? "any" : "never";
+}
+
+function extractRiskLevel(report, format, conflict) {
+  if (!report) {
+    return conflict ? "MEDIUM" : "LOW";
+  }
+
+  if (format === "json") {
+    try {
+      const payload = JSON.parse(report);
+      if (["LOW", "MEDIUM", "HIGH"].includes(payload.risk_level)) {
+        return payload.risk_level;
+      }
+    } catch {
+      return conflict ? "MEDIUM" : "LOW";
+    }
+  }
+
+  const markdownRisk = report.match(/\*\*Risk:\*\*\s*(LOW|MEDIUM|HIGH)/);
+  if (markdownRisk) {
+    return markdownRisk[1];
+  }
+
+  const textRisk = report.match(/^Risk:\s*(LOW|MEDIUM|HIGH)$/m);
+  if (textRisk) {
+    return textRisk[1];
+  }
+
+  return conflict ? "MEDIUM" : "LOW";
+}
+
+function shouldFailWorkflow(options) {
+  if (options.exitCode === 1) {
+    return true;
+  }
+
+  if (!options.conflict) {
+    return false;
+  }
+
+  if (options.failurePolicy === "never") {
+    return false;
+  }
+
+  if (options.failurePolicy === "high") {
+    return options.riskLevel === "HIGH";
+  }
+
+  return true;
+}
+
 function writeOutput(name, value) {
   if (!process.env.GITHUB_OUTPUT) {
     return;
@@ -151,7 +215,9 @@ function buildStepSummary(report, options) {
     options.exitCode === 1
       ? "Check the action logs and verify both Git refs are available."
       : options.conflict
-        ? "Resolve or rebase the branch before merging. Start with the highest-risk directory in the detailed report."
+        ? options.workflowWillFail
+          ? "Resolve or rebase the branch before merging. Start with the highest-risk directory in the detailed report."
+          : "Review the report before merging. This workflow is not blocking because of the configured failure policy."
         : "No merge-conflict action needed.";
 
   return [
@@ -162,7 +228,9 @@ function buildStepSummary(report, options) {
     `| Result | ${escapeMarkdownCell(resultLabel)} |`,
     `| Base | ${inlineCode(options.base)} |`,
     `| Head | ${inlineCode(options.head)} |`,
+    `| Risk | ${escapeMarkdownCell(options.riskLevel)} |`,
     `| Exit code | ${inlineCode(String(options.exitCode))} |`,
+    `| Failure policy | ${inlineCode(options.failurePolicy)} |`,
     `| Workflow status | ${escapeMarkdownCell(workflowLabel)} |`,
     "",
     "## Recommended Next Step",
