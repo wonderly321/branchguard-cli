@@ -21,6 +21,10 @@ const commentHeader = getInput("comment-header") || "<!-- branchguard-report -->
 const githubToken = getInput("github-token") || process.env.GITHUB_TOKEN || "";
 const workingDirectory = resolve(getInput("working-directory") || ".");
 const outputPath = getInput("output") || "";
+const webhookUrl = getInput("webhook-url") || "";
+const webhookProvider = normalizeWebhookProvider(getInput("webhook-provider"));
+const webhookOn = normalizeWebhookPolicy(getInput("webhook-on"));
+const webhookFailOnError = parseBooleanInput(getInput("webhook-fail-on-error"), false);
 
 const args = [cliPath, "check", base, head];
 if (format === "json") {
@@ -94,9 +98,32 @@ if (commentResult.url) {
   writeOutput("comment-url", commentResult.url);
 }
 
+const webhookResult = await sendWebhook(report, {
+  enabled: shouldSendWebhook({ url: webhookUrl, webhookOn, conflict, riskLevel }),
+  url: webhookUrl,
+  provider: webhookProvider,
+  base,
+  head,
+  exitCode,
+  conflict,
+  riskLevel,
+  workflowWillFail,
+});
+writeOutput("webhook-sent", String(webhookResult.sent));
+if (webhookResult.error) {
+  writeOutput("webhook-error", webhookResult.error);
+}
+
 if (commentResult.error) {
   console.error(commentResult.error);
   process.exit(1);
+}
+
+if (webhookResult.error) {
+  console.error(webhookResult.error);
+  if (webhookFailOnError) {
+    process.exit(1);
+  }
 }
 
 if (conflict && !workflowWillFail) {
@@ -144,6 +171,24 @@ function normalizeFailurePolicy(value, failOnConflict) {
   }
 
   return failOnConflict ? "any" : "never";
+}
+
+function normalizeWebhookProvider(value) {
+  const provider = String(value || "").trim().toLowerCase();
+  if (["generic", "feishu", "dingtalk"].includes(provider)) {
+    return provider;
+  }
+
+  return "generic";
+}
+
+function normalizeWebhookPolicy(value) {
+  const policy = String(value || "").trim().toLowerCase();
+  if (["always", "conflict", "high", "never"].includes(policy)) {
+    return policy;
+  }
+
+  return "conflict";
 }
 
 function extractRiskLevel(report, format, conflict) {
@@ -198,6 +243,22 @@ function shouldFailWorkflow(options) {
   }
 
   return true;
+}
+
+function shouldSendWebhook(options) {
+  if (!options.url || options.webhookOn === "never") {
+    return false;
+  }
+
+  if (options.webhookOn === "always") {
+    return true;
+  }
+
+  if (options.webhookOn === "high") {
+    return options.riskLevel === "HIGH";
+  }
+
+  return options.conflict;
 }
 
 function writeOutput(name, value) {
@@ -340,6 +401,87 @@ async function upsertPullRequestComment(report, options) {
   }
 
   return { written: true, url: created.data.html_url || "" };
+}
+
+async function sendWebhook(report, options) {
+  if (!options.enabled) {
+    return { sent: false };
+  }
+
+  const payload = buildWebhookPayload(report, options);
+  if (process.env.BRANCHGUARD_WEBHOOK_MOCK_FILE) {
+    appendFileSync(
+      process.env.BRANCHGUARD_WEBHOOK_MOCK_FILE,
+      `${JSON.stringify({ url: options.url, provider: options.provider, payload })}\n`,
+      "utf8",
+    );
+    return { sent: true };
+  }
+
+  try {
+    const response = await fetch(options.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "branchguard-cli",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      return { sent: false, error: `BranchGuard webhook failed with HTTP ${response.status}.` };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    return { sent: false, error: `BranchGuard webhook failed: ${error.message}` };
+  }
+}
+
+function buildWebhookPayload(report, options) {
+  const title = options.conflict
+    ? `BranchGuard ${options.riskLevel} conflict detected`
+    : "BranchGuard check passed";
+  const text = [
+    title,
+    `Base: ${options.base}`,
+    `Head: ${options.head}`,
+    `Risk: ${options.riskLevel}`,
+    `Exit code: ${options.exitCode}`,
+    `Workflow: ${options.workflowWillFail ? "failing" : "passing"}`,
+    "",
+    report || "No BranchGuard report was produced.",
+  ].join("\n");
+
+  if (options.provider === "feishu") {
+    return {
+      msg_type: "text",
+      content: {
+        text,
+      },
+    };
+  }
+
+  if (options.provider === "dingtalk") {
+    return {
+      msgtype: "markdown",
+      markdown: {
+        title,
+        text: `### ${title}\n\n${text}`,
+      },
+    };
+  }
+
+  return {
+    title,
+    base: options.base,
+    head: options.head,
+    exit_code: options.exitCode,
+    conflict: options.conflict,
+    risk_level: options.riskLevel,
+    workflow_will_fail: options.workflowWillFail,
+    report,
+  };
 }
 
 function getPullRequestContext() {

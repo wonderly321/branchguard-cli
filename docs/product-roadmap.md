@@ -47,8 +47,8 @@ Planned:
 - Productized GitHub Actions step summary. (done on `main`; release later)
 - Configurable GitHub Action failure policy by risk level. (done on `main`; release later)
 - HTML report. (done on `main`; release later)
+- Feishu/DingTalk webhook output. (done on `main`; release later)
 - Weekly conflict report.
-- Feishu/DingTalk webhook output.
 
 ## v1.0: Commercial Shape
 

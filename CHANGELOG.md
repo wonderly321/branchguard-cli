@@ -13,6 +13,7 @@ Added:
 - GitHub Action `fail-on-risk` policy with `risk-level` and `failure-policy` outputs.
 - Self-contained HTML reports for `check` and `matrix`.
 - GitHub Action `output` input for writing report files.
+- GitHub Action webhook notifications for generic, Feishu, and DingTalk payloads.
 
 ## 0.2.0
 

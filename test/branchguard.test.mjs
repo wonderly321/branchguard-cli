@@ -347,6 +347,67 @@ test("github action wrapper writes pull request comment in mock mode", () => {
   }
 });
 
+test("github action wrapper sends team webhooks in mock mode", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  const webhookPath = join(dirname(repo), "webhook.jsonl");
+  try {
+    const result = runAction(repo, {
+      BRANCHGUARD_WEBHOOK_MOCK_FILE: webhookPath,
+      GITHUB_OUTPUT: outputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_CONFLICT: "false",
+      INPUT_WEBHOOK_URL: "mock://branchguard",
+      INPUT_WEBHOOK_PROVIDER: "dingtalk",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /webhook-sent<<branchguard_webhook-sent_/);
+    assert.match(output, /\ntrue\nbranchguard_webhook-sent_/);
+
+    const webhook = JSON.parse(readFileSync(webhookPath, "utf8").trim());
+    assert.equal(webhook.url, "mock://branchguard");
+    assert.equal(webhook.provider, "dingtalk");
+    assert.equal(webhook.payload.msgtype, "markdown");
+    assert.match(webhook.payload.markdown.title, /BranchGuard MEDIUM conflict detected/);
+    assert.match(webhook.payload.markdown.text, /Base: main/);
+    assert.match(webhook.payload.markdown.text, /\| `app.txt` \| content \| MEDIUM \|/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
+test("github action wrapper can limit webhooks to high risk conflicts", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  const webhookPath = join(dirname(repo), "webhook.jsonl");
+  try {
+    const result = runAction(repo, {
+      BRANCHGUARD_WEBHOOK_MOCK_FILE: webhookPath,
+      GITHUB_OUTPUT: outputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "markdown",
+      INPUT_FAIL_ON_CONFLICT: "false",
+      INPUT_WEBHOOK_URL: "mock://branchguard",
+      INPUT_WEBHOOK_ON: "high",
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /webhook-sent<<branchguard_webhook-sent_/);
+    assert.match(output, /\nfalse\nbranchguard_webhook-sent_/);
+    assert.equal(existsSync(webhookPath), false);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("github action wrapper writes html report files", () => {
   const repo = createFixtureRepo();
   const outputPath = join(dirname(repo), "github-output.txt");

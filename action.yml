@@ -52,6 +52,21 @@ inputs:
   output:
     description: Optional path for writing the BranchGuard report file.
     required: false
+  webhook-url:
+    description: Optional team webhook URL for BranchGuard notifications.
+    required: false
+  webhook-provider:
+    description: Webhook payload format. Supported values are generic, feishu, and dingtalk.
+    required: false
+    default: generic
+  webhook-on:
+    description: When to send webhook notifications. Supported values are conflict, high, always, and never.
+    required: false
+    default: conflict
+  webhook-fail-on-error:
+    description: Fail the workflow when webhook delivery fails.
+    required: false
+    default: "false"
   working-directory:
     description: Repository directory to run BranchGuard in.
     required: false
@@ -76,6 +91,10 @@ outputs:
     description: Whether BranchGuard created or updated a pull request comment.
   comment-url:
     description: URL of the pull request comment when available.
+  webhook-sent:
+    description: Whether BranchGuard sent a team webhook notification.
+  webhook-error:
+    description: Webhook delivery error when available.
 
 runs:
   using: node20

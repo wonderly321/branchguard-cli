@@ -171,6 +171,22 @@ Use `fail-on-risk: high` when a team wants normal conflicts to create comments a
 
 When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
 
+Team webhook notifications:
+
+```yaml
+- uses: wonderly321/branchguard-cli@main
+  with:
+    base: origin/main
+    head: HEAD
+    format: markdown
+    fail-on-risk: high
+    webhook-url: ${{ secrets.BRANCHGUARD_WEBHOOK_URL }}
+    webhook-provider: feishu
+    webhook-on: high
+```
+
+`webhook-provider` supports `generic`, `feishu`, and `dingtalk`. `webhook-on` supports `conflict`, `high`, `always`, and `never`. Webhook delivery failures do not fail CI unless `webhook-fail-on-error: "true"` is set.
+
 HTML artifact usage:
 
 ```yaml
