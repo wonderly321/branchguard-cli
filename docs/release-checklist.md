@@ -16,8 +16,8 @@ This checklist turns the current CLI into a release-ready package.
 - [x] Run `npm run check`.
 - [x] Run `npm test`.
 - [x] Run `npm pack --dry-run --cache .npm-cache`.
-- [ ] Publish `branchguard-cli@0.3.0`.
-- [ ] Create `v0.3.0` git tag after npm publish succeeds.
+- [x] Publish `branchguard-cli@0.3.0`.
+- [x] Create `v0.3.0` git tag after npm publish succeeds.
 
 ## Required Before v0.2
 
