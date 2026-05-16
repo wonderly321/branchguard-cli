@@ -11,6 +11,8 @@ Added:
 - Recent-contributor hints for conflict files and directory summaries.
 - Productized GitHub Actions step summary with result table and recommended next step.
 - GitHub Action `fail-on-risk` policy with `risk-level` and `failure-policy` outputs.
+- Self-contained HTML reports for `check` and `matrix`.
+- GitHub Action `output` input for writing report files.
 
 ## 0.2.0
 

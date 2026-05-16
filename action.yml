@@ -20,7 +20,7 @@ inputs:
     required: false
     default: "true"
   format:
-    description: Output format. Supported values are json, markdown, and text.
+    description: Output format. Supported values are json, markdown, html, and text.
     required: false
     default: json
   fail-on-conflict:
@@ -49,6 +49,9 @@ inputs:
   github-token:
     description: GitHub token used when comment is true.
     required: false
+  output:
+    description: Optional path for writing the BranchGuard report file.
+    required: false
   working-directory:
     description: Repository directory to run BranchGuard in.
     required: false
@@ -65,6 +68,8 @@ outputs:
     description: Effective workflow failure policy.
   report:
     description: BranchGuard stdout report.
+  report-path:
+    description: Report file path when the output input is provided.
   summary-written:
     description: Whether BranchGuard wrote to the GitHub Actions step summary.
   comment-written:

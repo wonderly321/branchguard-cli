@@ -161,6 +161,30 @@ test("prints markdown reports for check and matrix", () => {
   }
 });
 
+test("prints html reports for check and matrix", () => {
+  const repo = createFixtureRepo();
+  const reportPath = join(dirname(repo), "reports", "branchguard-report.html");
+  try {
+    const check = runCli(["check", "main", "feature-conflict", "--html", "--output", reportPath], repo);
+    assert.equal(check.status, 2);
+    assert.match(check.stdout, /<!doctype html>/);
+    const report = readFileSync(reportPath, "utf8");
+    assert.match(report, /data-risk-level="MEDIUM"/);
+    assert.match(report, /Merge Conflict Report/);
+    assert.match(report, /Directory Summary/);
+    assert.match(report, /app\.txt/);
+    assert.match(report, /risk-medium/);
+
+    const matrix = runCli(["matrix", "--base", "main", "--html"], repo);
+    assert.equal(matrix.status, 2);
+    assert.match(matrix.stdout, /Branch Conflict Matrix/);
+    assert.match(matrix.stdout, /feature-conflict/);
+    assert.match(matrix.stdout, /risk-medium/);
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("summarizes conflicts by directory", () => {
   const repo = createFixtureRepo({
     conflictFiles: ["src/app.js", "src/auth/login.js", "package-lock.json"],
@@ -323,6 +347,36 @@ test("github action wrapper writes pull request comment in mock mode", () => {
   }
 });
 
+test("github action wrapper writes html report files", () => {
+  const repo = createFixtureRepo();
+  const outputPath = join(dirname(repo), "github-output.txt");
+  const reportPath = join(dirname(repo), "branchguard-report.html");
+  try {
+    const result = runAction(repo, {
+      GITHUB_OUTPUT: outputPath,
+      INPUT_BASE: "main",
+      INPUT_HEAD: "feature-conflict",
+      INPUT_FORMAT: "html",
+      INPUT_FAIL_ON_RISK: "high",
+      INPUT_OUTPUT: reportPath,
+      INPUT_WORKING_DIRECTORY: repo,
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /<!doctype html>/);
+    const report = readFileSync(reportPath, "utf8");
+    assert.match(report, /data-risk-level="MEDIUM"/);
+    assert.match(report, /Merge Conflict Report/);
+    const output = readFileSync(outputPath, "utf8");
+    assert.match(output, /risk-level<<branchguard_risk-level_/);
+    assert.match(output, /\nMEDIUM\nbranchguard_risk-level_/);
+    assert.match(output, /report-path<<branchguard_report-path_/);
+    assert.match(output, new RegExp(`\\n${escapeRegExp(reportPath)}\\nbranchguard_report-path_`));
+  } finally {
+    rmSync(dirname(repo), { recursive: true, force: true });
+  }
+});
+
 test("github action wrapper writes markdown step summary", () => {
   const repo = createFixtureRepo();
   const outputPath = join(dirname(repo), "github-output.txt");
@@ -436,4 +490,8 @@ function runAction(cwd, env = {}) {
     env: { ...process.env, ...env },
     windowsHide: true,
   });
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

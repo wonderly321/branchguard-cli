@@ -40,6 +40,7 @@ branchguard check main feature/login
 branchguard check main feature/login --json
 branchguard check main feature/login --markdown
 branchguard check main feature/login --markdown --output branchguard-report.md
+branchguard check main feature/login --html --output branchguard-report.html
 branchguard matrix --base main
 ```
 
@@ -82,6 +83,7 @@ Example:
 node ./bin/branchguard.mjs check main feature/login
 node ./bin/branchguard.mjs check main feature/login --markdown
 node ./bin/branchguard.mjs check main feature/login --markdown --output branchguard-report.md
+node ./bin/branchguard.mjs check main feature/login --html --output branchguard-report.html
 ```
 
 Exit codes:
@@ -100,21 +102,25 @@ node ./bin/branchguard.mjs matrix --base main --limit 20
 node ./bin/branchguard.mjs matrix --base main --json
 node ./bin/branchguard.mjs matrix --base main --markdown
 node ./bin/branchguard.mjs matrix --base main --markdown --output branchguard-matrix.md
+node ./bin/branchguard.mjs matrix --base main --html --output branchguard-matrix.html
 ```
 
 ## Output Formats
 
-BranchGuard supports human text output by default, plus JSON and Markdown for automation:
+BranchGuard supports human text output by default, plus JSON, Markdown, and HTML for automation:
 
 ```bash
 branchguard check main feature/login --json
 branchguard check main feature/login --markdown
 branchguard check main feature/login --markdown --output branchguard-report.md
+branchguard check main feature/login --html --output branchguard-report.html
 ```
 
 `--output <file>` writes the same report that is printed to stdout. Parent directories are created automatically.
 
-Markdown and JSON reports include a directory summary so teams can quickly see which module or root-level file is creating the most risk.
+Markdown, HTML, and JSON reports include a directory summary so teams can quickly see which module or root-level file is creating the most risk.
+
+HTML reports are self-contained files with inline CSS, so they work well as CI artifacts.
 
 Reports also include lightweight recent-contributor hints from `git log` on the base and head refs. These are not strict code ownership rules; they are quick routing hints for who may know the conflicting files best.
 
@@ -164,6 +170,24 @@ The step summary includes a scan-friendly result table, recommended next step, a
 Use `fail-on-risk: high` when a team wants normal conflicts to create comments and summaries without blocking CI. Supported values are `any`, `high`, and `never`. The older `fail-on-conflict` input still works for compatibility.
 
 When `comment: "true"` is used on `main`, the Action creates or updates one BranchGuard pull request comment.
+
+HTML artifact usage:
+
+```yaml
+- uses: wonderly321/branchguard-cli@main
+  with:
+    base: origin/main
+    head: HEAD
+    format: html
+    output: branchguard-report.html
+    fail-on-risk: high
+
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: branchguard-report
+    path: branchguard-report.html
+```
 
 ## Risk Levels
 

@@ -264,7 +264,7 @@ function parseCheckArgs(args) {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
 
-    if (arg === "--json" || arg === "--markdown") {
+    if (isOutputFormatFlag(arg)) {
       const output = parseOutputFormat([arg], result.format);
       if (output.error) {
         result.error = output.error;
@@ -280,7 +280,7 @@ function parseCheckArgs(args) {
         result.error = {
           code: "MISSING_OUTPUT_PATH",
           message: "missing value for --output",
-          hint: "example: branchguard check main feature --markdown --output branchguard-report.md",
+          hint: "example: branchguard check main feature --html --output branchguard-report.html",
         };
         return result;
       }
@@ -301,7 +301,7 @@ function parseCheckArgs(args) {
       result.error = {
         code: "UNKNOWN_OPTION",
         message: `unknown check option "${arg}"`,
-        hint: "example: branchguard check main feature/login --markdown",
+        hint: "example: branchguard check main feature/login --html",
       };
       return result;
     }
@@ -322,7 +322,7 @@ function parseMatrixArgs(args) {
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--json" || arg === "--markdown") {
+    if (isOutputFormatFlag(arg)) {
       const output = parseOutputFormat([arg], result.format);
       if (output.error) {
         result.error = output.error;
@@ -360,7 +360,7 @@ function parseMatrixArgs(args) {
         result.error = {
           code: "MISSING_OUTPUT_PATH",
           message: "missing value for --output",
-          hint: "example: branchguard matrix --base main --markdown --output branchguard-matrix.md",
+          hint: "example: branchguard matrix --base main --html --output branchguard-matrix.html",
         };
         return result;
       }
@@ -400,16 +400,16 @@ function parseOutputFormat(args, currentFormat = "text") {
   const result = { format: currentFormat };
 
   for (const arg of args) {
-    if (arg !== "--json" && arg !== "--markdown") {
+    if (!isOutputFormatFlag(arg)) {
       continue;
     }
 
-    const nextFormat = arg === "--json" ? "json" : "markdown";
+    const nextFormat = arg.slice(2);
     if (result.format !== "text" && result.format !== nextFormat) {
       result.error = {
         code: "OUTPUT_FORMAT_CONFLICT",
         message: "choose only one output format",
-        hint: "use either --json or --markdown",
+        hint: "use --json, --markdown, or --html",
       };
       return result;
     }
@@ -417,6 +417,10 @@ function parseOutputFormat(args, currentFormat = "text") {
   }
 
   return result;
+}
+
+function isOutputFormatFlag(arg) {
+  return arg === "--json" || arg === "--markdown" || arg === "--html";
 }
 
 function doctor() {
@@ -995,6 +999,10 @@ function renderCheckReport(result, format) {
     return renderCheckMarkdown(result);
   }
 
+  if (format === "html") {
+    return renderCheckHtml(result);
+  }
+
   return renderCheckText(result);
 }
 
@@ -1005,6 +1013,10 @@ function renderMatrixReport(matrix, format) {
 
   if (format === "markdown") {
     return renderMatrixMarkdown(matrix);
+  }
+
+  if (format === "html") {
+    return renderMatrixHtml(matrix);
   }
 
   return renderMatrixText(matrix);
@@ -1100,6 +1112,94 @@ function renderCheckMarkdown(result) {
   return lines.join("\n");
 }
 
+function renderCheckHtml(result) {
+  const directoryRows = result.directory_summary
+    .map(
+      (directory) => `<tr>
+        <td><code>${escapeHtml(formatDirectoryPath(directory.path))}</code></td>
+        <td class="number">${directory.conflict_count}</td>
+        <td>${renderRiskBadge(directory.risk)}</td>
+        <td>${escapeHtml(formatContributorsText(directory.recent_contributors))}</td>
+      </tr>`,
+    )
+    .join("\n");
+
+  const fileRows = result.conflict_files
+    .map(
+      (file) => `<tr>
+        <td><code>${escapeHtml(file.path)}</code></td>
+        <td>${escapeHtml(file.type)}</td>
+        <td>${renderRiskBadge(file.risk)}</td>
+        <td>${escapeHtml(formatContributorsText(file.recent_contributors))}</td>
+      </tr>`,
+    )
+    .join("\n");
+
+  const conflictSections =
+    result.conflict_files.length > 0
+      ? `
+      <section>
+        <h2>Directory Summary</h2>
+        <table>
+          <thead>
+            <tr><th>Directory</th><th>Conflicts</th><th>Risk</th><th>Recent contributors</th></tr>
+          </thead>
+          <tbody>
+            ${directoryRows}
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Conflicting Files</h2>
+        <table>
+          <thead>
+            <tr><th>File</th><th>Type</th><th>Risk</th><th>Recent contributors</th></tr>
+          </thead>
+          <tbody>
+            ${fileRows}
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Recommendation</h2>
+        <ul>
+          <li>Merge or rebase this branch sooner.</li>
+          <li>Coordinate with owners of the conflicting files.</li>
+          ${result.risk_level === "HIGH" ? "<li>Review high-risk files carefully before merging.</li>" : ""}
+        </ul>
+      </section>`
+      : `<section class="empty-state"><p>No merge conflicts detected.</p></section>`;
+
+  const ignoredSection =
+    result.ignored_conflict_count > 0
+      ? `<section class="notice"><p>Ignored conflicts: ${result.ignored_conflict_count} file${result.ignored_conflict_count === 1 ? "" : "s"}.</p></section>`
+      : "";
+
+  return renderHtmlDocument({
+    title: "BranchGuard Report",
+    riskLevel: result.risk_level,
+    body: `
+      <header>
+        <p class="eyebrow">BranchGuard</p>
+        <h1>Merge Conflict Report</h1>
+        <p class="summary">${escapeHtml(result.summary)}</p>
+      </header>
+
+      <section class="stats">
+        <div><span>Base</span><strong><code>${escapeHtml(result.base)}</code></strong></div>
+        <div><span>Head</span><strong><code>${escapeHtml(result.head)}</code></strong></div>
+        <div><span>Risk</span><strong>${renderRiskBadge(result.risk_level)}</strong></div>
+        <div><span>Conflicts</span><strong>${result.conflict_count}</strong></div>
+      </section>
+
+      ${conflictSections}
+      ${ignoredSection}
+    `,
+  });
+}
+
 function renderMatrixText(matrix) {
   const lines = [
     "BranchGuard Matrix",
@@ -1160,6 +1260,114 @@ function renderMatrixMarkdown(matrix) {
   return lines.join("\n");
 }
 
+function renderMatrixHtml(matrix) {
+  const riskLevel = highestMatrixRisk(matrix);
+  const rows = matrix.entries
+    .map(
+      (entry) => `<tr>
+        <td><code>${escapeHtml(entry.branch)}</code></td>
+        <td class="number">${entry.conflict_count}</td>
+        <td>${renderRiskBadge(entry.risk_level)}</td>
+      </tr>`,
+    )
+    .join("\n");
+
+  const matrixSection =
+    matrix.entries.length > 0
+      ? `<section>
+        <h2>Branch Matrix</h2>
+        <table>
+          <thead>
+            <tr><th>Branch</th><th>Conflicts</th><th>Risk</th></tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </section>`
+      : `<section class="empty-state"><p>No local branches to compare.</p></section>`;
+
+  return renderHtmlDocument({
+    title: "BranchGuard Matrix",
+    riskLevel,
+    body: `
+      <header>
+        <p class="eyebrow">BranchGuard</p>
+        <h1>Branch Conflict Matrix</h1>
+        <p class="summary">${matrix.branch_count} branch${matrix.branch_count === 1 ? "" : "es"} checked against <code>${escapeHtml(matrix.base)}</code>.</p>
+      </header>
+
+      <section class="stats">
+        <div><span>Base</span><strong><code>${escapeHtml(matrix.base)}</code></strong></div>
+        <div><span>Branches</span><strong>${matrix.branch_count}</strong></div>
+        <div><span>Highest risk</span><strong>${renderRiskBadge(riskLevel)}</strong></div>
+      </section>
+
+      ${matrixSection}
+    `,
+  });
+}
+
+function renderHtmlDocument(options) {
+  return `<!doctype html>
+<html lang="en" data-risk-level="${escapeHtml(options.riskLevel)}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(options.title)}</title>
+  <style>
+    :root { color-scheme: light; --bg: #f7f8fb; --text: #17202a; --muted: #5c6675; --line: #dce2ea; --panel: #ffffff; --blue: #2458d3; --green: #1f7a4d; --amber: #a85d00; --red: #b42318; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 48px; }
+    header { margin-bottom: 24px; }
+    h1 { margin: 4px 0 8px; font-size: 32px; line-height: 1.15; letter-spacing: 0; }
+    h2 { margin: 28px 0 12px; font-size: 18px; letter-spacing: 0; }
+    code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    ul { margin-top: 8px; padding-left: 22px; }
+    .eyebrow { margin: 0; color: var(--blue); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+    .summary { margin: 0; color: var(--muted); font-size: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0 8px; }
+    .stats div, .empty-state, .notice { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+    .stats span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    .stats strong { display: block; margin-top: 4px; font-size: 18px; }
+    .number { text-align: right; }
+    .risk { display: inline-flex; align-items: center; min-width: 72px; justify-content: center; border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
+    .risk-low { color: var(--green); background: #e8f5ee; }
+    .risk-medium { color: var(--amber); background: #fff4df; }
+    .risk-high { color: var(--red); background: #feeceb; }
+    @media (max-width: 720px) {
+      main { padding: 24px 12px 36px; }
+      h1 { font-size: 26px; }
+      table { display: block; overflow-x: auto; }
+      th, td { white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+${options.body}
+  </main>
+</body>
+</html>`;
+}
+
+function renderRiskBadge(riskLevel) {
+  const risk = String(riskLevel || "LOW").toUpperCase();
+  return `<span class="risk risk-${risk.toLowerCase()}">${escapeHtml(risk)}</span>`;
+}
+
+function highestMatrixRisk(matrix) {
+  return matrix.entries.reduce(
+    (highest, entry) => (RISK_SCORE[entry.risk_level] > RISK_SCORE[highest] ? entry.risk_level : highest),
+    "LOW",
+  );
+}
+
 function printDoctor(result) {
   console.log("BranchGuard Doctor");
   console.log("");
@@ -1174,8 +1382,8 @@ function printHelp() {
 
 Usage:
   branchguard init [--force] [--json]
-  branchguard check <base> <head> [--json|--markdown] [--output <file>]
-  branchguard matrix --base <base> [--limit 20] [--json|--markdown] [--output <file>]
+  branchguard check <base> <head> [--json|--markdown|--html] [--output <file>]
+  branchguard matrix --base <base> [--limit 20] [--json|--markdown|--html] [--output <file>]
   branchguard doctor
   branchguard --version
   branchguard --help
@@ -1186,6 +1394,7 @@ Examples:
   branchguard check origin/main HEAD --json
   branchguard check origin/main HEAD --markdown
   branchguard check origin/main HEAD --markdown --output branchguard-report.md
+  branchguard check origin/main HEAD --html --output branchguard-report.html
   branchguard matrix --base main
 `);
 }
@@ -1215,6 +1424,15 @@ function inlineCode(value) {
 
 function escapeMarkdownCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function formatDirectoryPath(path) {

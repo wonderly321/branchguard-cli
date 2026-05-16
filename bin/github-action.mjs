@@ -20,12 +20,19 @@ const writePrComment = parseBooleanInput(getInput("comment"), false);
 const commentHeader = getInput("comment-header") || "<!-- branchguard-report -->";
 const githubToken = getInput("github-token") || process.env.GITHUB_TOKEN || "";
 const workingDirectory = resolve(getInput("working-directory") || ".");
+const outputPath = getInput("output") || "";
 
 const args = [cliPath, "check", base, head];
 if (format === "json") {
   args.push("--json");
 } else if (format === "markdown") {
   args.push("--markdown");
+} else if (format === "html") {
+  args.push("--html");
+}
+
+if (outputPath) {
+  args.push("--output", outputPath);
 }
 
 const result = spawnSync(process.execPath, args, {
@@ -59,6 +66,9 @@ writeOutput("risk-level", riskLevel);
 writeOutput("failure-policy", failurePolicy);
 if (report) {
   writeOutput("report", report);
+}
+if (outputPath) {
+  writeOutput("report-path", outputPath);
 }
 const summaryWritten = writeSummary(report, {
   enabled: writeStepSummary,
@@ -104,7 +114,7 @@ function getInput(name) {
 
 function normalizeFormat(formatInput, jsonInput) {
   const format = String(formatInput || "").trim().toLowerCase();
-  if (["json", "markdown", "text"].includes(format)) {
+  if (["json", "markdown", "html", "text"].includes(format)) {
     return format;
   }
 
@@ -160,6 +170,11 @@ function extractRiskLevel(report, format, conflict) {
   const textRisk = report.match(/^Risk:\s*(LOW|MEDIUM|HIGH)$/m);
   if (textRisk) {
     return textRisk[1];
+  }
+
+  const htmlRisk = report.match(/data-risk-level="(LOW|MEDIUM|HIGH)"/i);
+  if (htmlRisk) {
+    return htmlRisk[1].toUpperCase();
   }
 
   return conflict ? "MEDIUM" : "LOW";
@@ -248,7 +263,7 @@ function formatDetailedReport(report, format) {
     return demoteMarkdownHeadings(report);
   }
 
-  const fence = format === "json" ? "json" : "text";
+  const fence = format === "json" ? "json" : format === "html" ? "html" : "text";
   return `\`\`\`${fence}\n${report}\n\`\`\``;
 }
 
